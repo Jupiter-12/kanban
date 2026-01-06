@@ -1,8 +1,34 @@
 {
-	"folders": [
-		{
-			"path": "."
-		}
-	],
-	"settings": {}
+  "folders": [
+    {
+      "name": "看板系统",
+      "path": "."
+    }
+  ],
+  "settings": {
+    "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+    "python.analysis.extraPaths": ["${workspaceFolder}/backend"],
+    "[python]": {
+      "editor.formatOnSave": true,
+      "editor.defaultFormatter": "charliermarsh.ruff",
+      "editor.tabSize": 4
+    },
+    "[typescript]": {
+      "editor.formatOnSave": true,
+      "editor.tabSize": 2
+    },
+    "[vue]": {
+      "editor.formatOnSave": true,
+      "editor.tabSize": 2
+    },
+    "editor.rulers": [120]
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-python.python",
+      "charliermarsh.ruff",
+      "Vue.volar",
+      "dbaeumer.vscode-eslint"
+    ]
+  }
 }
