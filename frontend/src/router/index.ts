@@ -26,7 +26,17 @@ const routes: RouteRecordRaw[] = [
       {
         path: '',
         name: 'Home',
-        component: () => import('@/views/HomeView.vue')
+        redirect: '/projects'
+      },
+      {
+        path: 'projects',
+        name: 'Projects',
+        component: () => import('@/views/ProjectList.vue')
+      },
+      {
+        path: 'projects/:id',
+        name: 'Board',
+        component: () => import('@/views/BoardView.vue')
       }
     ]
   }

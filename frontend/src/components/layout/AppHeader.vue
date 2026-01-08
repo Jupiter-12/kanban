@@ -3,15 +3,20 @@
  * 应用头部导航栏
  */
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const user = computed(() => authStore.currentUser)
 const displayName = computed(() => user.value?.display_name || user.value?.username || '')
+
+function goToProjects() {
+  router.push('/projects')
+}
 
 async function handleLogout() {
   try {
@@ -32,7 +37,16 @@ async function handleLogout() {
 <template>
   <el-header class="app-header">
     <div class="header-left">
-      <h1 class="app-title">看板系统</h1>
+      <h1 class="app-title" @click="goToProjects">看板系统</h1>
+      <el-menu
+        mode="horizontal"
+        :default-active="route.path"
+        :ellipsis="false"
+        class="header-menu"
+        router
+      >
+        <el-menu-item index="/projects">我的项目</el-menu-item>
+      </el-menu>
     </div>
     <div class="header-right">
       <el-dropdown trigger="click">
@@ -82,6 +96,16 @@ export default {
   font-size: 20px;
   font-weight: 600;
   color: #303133;
+  cursor: pointer;
+}
+
+.app-title:hover {
+  color: #409eff;
+}
+
+.header-menu {
+  margin-left: 24px;
+  border-bottom: none;
 }
 
 .header-right {

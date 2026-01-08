@@ -18,6 +18,7 @@ import AppHeader from './AppHeader.vue'
 .app-layout {
   min-height: 100vh;
   background: #f5f7fa;
+  flex-direction: column;
 }
 
 .app-main {

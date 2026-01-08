@@ -1,5 +1,6 @@
 """数据库配置和连接模块。"""
 
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Generator
 
@@ -41,3 +42,12 @@ def get_db() -> Generator[Session, None, None]:
 def init_db() -> None:
     """初始化数据库，创建所有表。"""
     Base.metadata.create_all(bind=engine)
+
+
+def utc_now() -> datetime:
+    """获取当前UTC时间。
+
+    Returns:
+        当前UTC时间
+    """
+    return datetime.now(timezone.utc)
