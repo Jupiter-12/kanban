@@ -1,4 +1,4 @@
 /**
  * 状态管理模块导出
  */
-export {}
+export { useAuthStore } from './auth'

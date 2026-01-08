@@ -176,6 +176,7 @@ kanban/
 │   │   ├── stores/         # 状态管理
 │   │   └── utils/          # 工具函数
 │   └── tests/              # 测试代码
+├── scripts/                # 快捷脚本
 ├── openspec/               # 规范文档
 └── data/                   # SQLite数据文件
 ```

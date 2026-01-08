@@ -4,6 +4,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import router as api_router
+from app.config import settings
+from app.models.database import init_db
+
+# 导入模型以确保表被创建
+from app.models import user  # noqa: F401
 
 
 def create_app() -> FastAPI:
@@ -18,10 +23,10 @@ def create_app() -> FastAPI:
         version="0.1.0",
     )
 
-    # 配置CORS
+    # 配置CORS - 使用配置文件中的允许来源
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=settings.CORS_ORIGINS,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -29,6 +34,9 @@ def create_app() -> FastAPI:
 
     # 注册路由
     app.include_router(api_router, prefix="/api")
+
+    # 初始化数据库
+    init_db()
 
     return app
 
