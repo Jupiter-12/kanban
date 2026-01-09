@@ -55,7 +55,8 @@
       "Bash(git add:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: 实现看板拖拽排序功能\n\n- 添加任务在列内和跨列拖拽排序\n- 添加列拖拽重新排序\n- 使用乐观更新策略，失败时自动回滚\n- 添加58个测试用例，核心逻辑100%覆盖率\n- 归档add-drag-sort提案\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nchore: 添加本地配置和测试覆盖率报告\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nchore: 更新本地配置\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nchore: 更新本地配置\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push)"
     ]
   }
 }
