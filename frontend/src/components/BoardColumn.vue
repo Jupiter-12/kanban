@@ -4,10 +4,18 @@
  */
 import { ref } from 'vue'
 import { Plus, Edit, Delete } from '@element-plus/icons-vue'
-import type { ColumnWithTasks } from '@/types'
+import draggable from 'vuedraggable'
+import type { ColumnWithTasks, Task } from '@/types'
 import TaskCard from './TaskCard.vue'
 
-defineProps<{
+/** 拖拽变更事件类型 */
+interface DragChangeEvent {
+  added?: { newIndex: number; element: Task }
+  removed?: { oldIndex: number; element: Task }
+  moved?: { newIndex: number; oldIndex: number; element: Task }
+}
+
+const props = defineProps<{
   column: ColumnWithTasks
 }>()
 
@@ -17,6 +25,7 @@ const emit = defineEmits<{
   createTask: [columnId: number, title: string]
   updateTask: [taskId: number, title: string]
   deleteTask: [taskId: number]
+  moveTask: [taskId: number, sourceColumnId: number, targetColumnId: number, newPosition: number]
 }>()
 
 const editing = ref(false)
@@ -57,6 +66,26 @@ function confirmAddTask(columnId: number) {
   }
   cancelAddTask()
 }
+
+/**
+ * 处理任务拖拽变更
+ * 注意：vuedraggable 在触发 change 事件前已经更新了数组
+ * 但 task.column_id 属性还未更新，仍然是源列 ID
+ */
+function onTaskChange(event: DragChangeEvent) {
+  // 任务被添加到当前列（从其他列拖入）
+  if (event.added) {
+    const task = event.added.element
+    // 此时 task.column_id 仍然是源列 ID（vuedraggable 只移动了数组元素，未修改属性）
+    const sourceColumnId = task.column_id
+    emit('moveTask', task.id, sourceColumnId, props.column.id, event.added.newIndex)
+  }
+  // 列内移动
+  if (event.moved) {
+    const task = event.moved.element
+    emit('moveTask', task.id, props.column.id, props.column.id, event.moved.newIndex)
+  }
+}
 </script>
 
 <template>
@@ -93,13 +122,22 @@ function confirmAddTask(columnId: number) {
     </div>
 
     <div class="column-content">
-      <TaskCard
-        v-for="task in column.tasks"
-        :key="task.id"
-        :task="task"
-        @update="(title) => emit('updateTask', task.id, title)"
-        @delete="emit('deleteTask', task.id)"
-      />
+      <draggable
+        :list="column.tasks"
+        group="tasks"
+        item-key="id"
+        class="task-list"
+        :animation="150"
+        @change="onTaskChange"
+      >
+        <template #item="{ element: task }">
+          <TaskCard
+            :task="task"
+            @update="(title) => emit('updateTask', task.id, title)"
+            @delete="emit('deleteTask', task.id)"
+          />
+        </template>
+      </draggable>
 
       <div v-if="addingTask" class="add-task-form">
         <el-input
@@ -197,6 +235,17 @@ function confirmAddTask(columnId: number) {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 20px;
+}
+
+.task-list:empty {
+  min-height: 60px;
 }
 
 .add-task-form {

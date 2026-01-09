@@ -52,6 +52,12 @@ export interface ColumnReorderRequest {
   column_ids: number[]
 }
 
+/** 任务移动请求 */
+export interface TaskMoveRequest {
+  target_column_id: number
+  position: number
+}
+
 /** 项目信息 */
 export interface Project {
   id: number

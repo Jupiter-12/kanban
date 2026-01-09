@@ -6,8 +6,15 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, Plus } from '@element-plus/icons-vue'
+import draggable from 'vuedraggable'
 import { useBoardStore } from '@/stores'
 import BoardColumn from '@/components/BoardColumn.vue'
+import type { ColumnWithTasks } from '@/types'
+
+/** 列拖拽变更事件类型 */
+interface ColumnDragChangeEvent {
+  moved?: { newIndex: number; oldIndex: number; element: ColumnWithTasks }
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -118,6 +125,36 @@ async function handleDeleteTask(taskId: number) {
     ElMessage.error('删除任务失败')
   }
 }
+
+/**
+ * 处理任务移动
+ */
+async function handleMoveTask(
+  taskId: number,
+  sourceColumnId: number,
+  targetColumnId: number,
+  newPosition: number
+) {
+  try {
+    await boardStore.moveTask(taskId, sourceColumnId, targetColumnId, newPosition)
+  } catch {
+    ElMessage.error('移动任务失败')
+  }
+}
+
+/**
+ * 处理列拖拽排序
+ */
+async function onColumnChange(event: ColumnDragChangeEvent) {
+  if (event.moved) {
+    const columnIds = boardStore.columns.map((c) => c.id)
+    try {
+      await boardStore.reorderColumns(columnIds)
+    } catch {
+      ElMessage.error('列排序失败')
+    }
+  }
+}
 </script>
 
 <template>
@@ -135,16 +172,26 @@ async function handleDeleteTask(taskId: number) {
 
     <div v-else class="board-content">
       <div class="columns-container">
-        <BoardColumn
-          v-for="column in boardStore.columns"
-          :key="column.id"
-          :column="column"
-          @update-column="handleUpdateColumn"
-          @delete-column="handleDeleteColumn"
-          @create-task="handleCreateTask"
-          @update-task="handleUpdateTask"
-          @delete-task="handleDeleteTask"
-        />
+        <draggable
+          :list="boardStore.columns"
+          item-key="id"
+          class="columns-draggable"
+          handle=".column-header"
+          :animation="150"
+          @change="onColumnChange"
+        >
+          <template #item="{ element: column }">
+            <BoardColumn
+              :column="column"
+              @update-column="handleUpdateColumn"
+              @delete-column="handleDeleteColumn"
+              @create-task="handleCreateTask"
+              @update-task="handleUpdateTask"
+              @delete-task="handleDeleteTask"
+              @move-task="handleMoveTask"
+            />
+          </template>
+        </draggable>
 
         <div class="add-column">
           <div v-if="addingColumn" class="add-column-form">
@@ -217,6 +264,11 @@ async function handleDeleteTask(taskId: number) {
   gap: 16px;
   height: 100%;
   padding-bottom: 16px;
+}
+
+.columns-draggable {
+  display: flex;
+  gap: 16px;
 }
 
 .add-column {

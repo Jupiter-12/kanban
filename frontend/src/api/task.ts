@@ -2,7 +2,7 @@
  * 任务相关API
  */
 import { post, put, del } from './request'
-import type { Task, TaskCreateRequest, TaskUpdateRequest } from '@/types'
+import type { Task, TaskCreateRequest, TaskUpdateRequest, TaskMoveRequest } from '@/types'
 
 /**
  * 创建任务
@@ -34,4 +34,16 @@ export function updateTask(
  */
 export function deleteTask(taskId: number): Promise<void> {
   return del<void>(`/tasks/${taskId}`)
+}
+
+/**
+ * 移动任务
+ * @param taskId - 任务ID
+ * @param data - 移动数据（目标列ID和位置）
+ */
+export function moveTask(
+  taskId: number,
+  data: TaskMoveRequest
+): Promise<Task> {
+  return put<Task>(`/tasks/${taskId}/move`, data)
 }

@@ -10,7 +10,8 @@ import type {
   ColumnCreateRequest,
   ColumnUpdateRequest,
   TaskCreateRequest,
-  TaskUpdateRequest
+  TaskUpdateRequest,
+  TaskMoveRequest
 } from '@/types'
 import * as projectApi from '@/api/project'
 import * as columnApi from '@/api/column'
@@ -138,6 +139,92 @@ export const useBoardStore = defineStore('board', () => {
   }
 
   /**
+   * 移动任务（列内或跨列）
+   * 注意：vuedraggable 已经更新了本地数组，此方法只负责同步到后端
+   * 如果后端失败，需要重新加载数据来恢复状态
+   */
+  async function moveTask(
+    taskId: number,
+    sourceColumnId: number,
+    targetColumnId: number,
+    newPosition: number
+  ): Promise<void> {
+    if (!currentProject.value) return
+
+    // 获取目标列（vuedraggable 已经把任务移到这里了）
+    const targetColumn = currentProject.value.columns.find(
+      (c) => c.id === targetColumnId
+    )
+    if (!targetColumn) return
+
+    const taskIndex = targetColumn.tasks.findIndex((t) => t.id === taskId)
+    if (taskIndex === -1) return
+
+    // 更新任务的 column_id 属性（乐观更新）
+    targetColumn.tasks[taskIndex].column_id = targetColumnId
+
+    // 更新目标列所有任务的 position（按数组索引，乐观更新）
+    targetColumn.tasks.forEach((t, idx) => {
+      t.position = idx
+    })
+
+    // 如果是跨列移动，更新源列所有任务的 position
+    if (sourceColumnId !== targetColumnId) {
+      const sourceColumn = currentProject.value.columns.find(
+        (c) => c.id === sourceColumnId
+      )
+      if (sourceColumn) {
+        sourceColumn.tasks.forEach((t, idx) => {
+          t.position = idx
+        })
+      }
+    }
+
+    try {
+      // 同步到后端
+      // 注意：newPosition 是 vuedraggable 的 newIndex，即任务在目标列的最终位置
+      const moveData: TaskMoveRequest = {
+        target_column_id: targetColumnId,
+        position: newPosition
+      }
+      const updatedTask = await taskApi.moveTask(taskId, moveData)
+      // 使用后端返回的数据更新本地状态（确保 updated_at 等字段同步）
+      targetColumn.tasks[taskIndex] = updatedTask
+    } catch (error) {
+      // 失败时重新加载项目数据来恢复状态
+      if (currentProject.value) {
+        await loadProject(currentProject.value.id)
+      }
+      throw error
+    }
+  }
+
+  /**
+   * 重新排序列
+   * 注意：vuedraggable 已经更新了本地数组顺序，此方法只负责同步到后端
+   * 如果后端失败，需要重新加载数据来恢复状态
+   */
+  async function reorderColumns(columnIds: number[]): Promise<void> {
+    if (!currentProject.value) return
+
+    // 更新列的 position 属性
+    currentProject.value.columns.forEach((column, idx) => {
+      column.position = idx
+    })
+
+    try {
+      // 同步到后端
+      await columnApi.reorderColumns({ column_ids: columnIds })
+    } catch (error) {
+      // 失败时重新加载项目数据来恢复状态
+      if (currentProject.value) {
+        await loadProject(currentProject.value.id)
+      }
+      throw error
+    }
+  }
+
+  /**
    * 根据ID获取列
    */
   function getColumnById(columnId: number): ColumnWithTasks | undefined {
@@ -172,6 +259,8 @@ export const useBoardStore = defineStore('board', () => {
     createTask,
     updateTask,
     deleteTask,
+    moveTask,
+    reorderColumns,
     getColumnById,
     getTaskById
   }

@@ -38,7 +38,7 @@ TBD - created by archiving change add-kanban-core. Update Purpose after archive.
 - **THEN** 系统返回403禁止访问错误
 
 ### Requirement: 看板列管理
-系统 MUST 提供看板列的创建、查看、编辑、删除、排序功能。
+系统 MUST 提供看板列的创建、查看、编辑、删除、拖拽排序功能。
 
 #### Scenario: 创建列成功
 - **WHEN** 用户在项目中创建新列
@@ -59,12 +59,12 @@ TBD - created by archiving change add-kanban-core. Update Purpose after archive.
 - **AND** 返回成功响应
 
 #### Scenario: 列排序
-- **WHEN** 用户调整列的顺序
+- **WHEN** 用户拖拽调整列的顺序
 - **THEN** 系统更新所有受影响列的位置
 - **AND** 返回更新后的列列表
 
 ### Requirement: 任务卡片管理
-系统 MUST 提供任务卡片的创建、查看、编辑、删除功能。
+系统 MUST 提供任务卡片的创建、查看、编辑、删除、拖拽排序功能。
 
 #### Scenario: 创建任务成功
 - **WHEN** 用户在列中创建新任务
@@ -84,6 +84,16 @@ TBD - created by archiving change add-kanban-core. Update Purpose after archive.
 - **THEN** 系统删除任务
 - **AND** 返回成功响应
 
+#### Scenario: 列内拖拽任务
+- **WHEN** 用户在同一列内拖拽任务到新位置
+- **THEN** 系统更新任务的位置
+- **AND** 其他任务位置自动调整
+
+#### Scenario: 跨列拖拽任务
+- **WHEN** 用户将任务从一列拖拽到另一列
+- **THEN** 系统更新任务所属列和位置
+- **AND** 源列和目标列的任务位置自动调整
+
 ### Requirement: 前端项目列表页
 前端 MUST 提供项目列表页面，展示用户的所有项目。
 
@@ -102,7 +112,7 @@ TBD - created by archiving change add-kanban-core. Update Purpose after archive.
 - **THEN** 跳转到该项目的看板视图页
 
 ### Requirement: 前端看板视图页
-前端 MUST 提供看板视图页面，展示项目的列和任务。
+前端 MUST 提供看板视图页面，展示项目的列和任务，支持拖拽交互。
 
 #### Scenario: 展示看板视图
 - **WHEN** 用户访问看板视图页
@@ -135,4 +145,14 @@ TBD - created by archiving change add-kanban-core. Update Purpose after archive.
 #### Scenario: 删除任务
 - **WHEN** 用户点击任务的删除按钮
 - **THEN** 删除该任务
+
+#### Scenario: 拖拽任务排序
+- **WHEN** 用户拖拽任务卡片
+- **THEN** 任务可在列内或跨列移动
+- **AND** 释放后自动保存新位置
+
+#### Scenario: 拖拽列排序
+- **WHEN** 用户拖拽列标题
+- **THEN** 列可以左右移动调整顺序
+- **AND** 释放后自动保存新顺序
 
