@@ -29,7 +29,31 @@
       "mcp__serena__search_for_pattern",
       "mcp__serena__find_symbol",
       "mcp__serena__get_symbols_overview",
-      "mcp__serena__think_about_collected_information"
+      "mcp__serena__think_about_collected_information",
+      "mcp__desktop-commander__start_process",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "mcp__desktop-commander__read_process_output",
+      "mcp__fuck-u-code__fuck_u_code_mcp",
+      "mcp__chrome-devtools__new_page",
+      "mcp__chrome-devtools__fill_form",
+      "mcp__chrome-devtools__drag",
+      "mcp__chrome-devtools__list_network_requests",
+      "mcp__serena__think_about_task_adherence",
+      "mcp__serena__replace_symbol_body",
+      "mcp__serena__think_about_whether_you_are_done",
+      "mcp__chrome-devtools__get_network_request",
+      "mcp__filesystem__read_file",
+      "mcp__desktop-commander__list_directory",
+      "mcp__desktop-commander__read_file",
+      "mcp__serena__find_file",
+      "mcp__desktop-commander__write_file",
+      "mcp__desktop-commander__create_directory",
+      "mcp__desktop-commander__force_terminate",
+      "mcp__desktop-commander__edit_block",
+      "mcp__cunzhi__zhi",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: 实现看板拖拽排序功能\n\n- 添加任务在列内和跨列拖拽排序\n- 添加列拖拽重新排序\n- 使用乐观更新策略，失败时自动回滚\n- 添加58个测试用例，核心逻辑100%覆盖率\n- 归档add-drag-sort提案\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }
