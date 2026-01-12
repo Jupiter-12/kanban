@@ -41,3 +41,9 @@ htmlcov/
 
 # Ruff
 .ruff_cache/
+
+# 测试截图
+test-*.png
+*.screenshot.png
+
+# 临时文件
