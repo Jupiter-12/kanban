@@ -2,10 +2,20 @@
  * 项目相关类型定义
  */
 
+import type { UserListItem } from './user'
+
+/** 任务优先级 */
+export type TaskPriority = 'high' | 'medium' | 'low'
+
 /** 任务信息 */
 export interface Task {
   id: number
   title: string
+  description: string | null
+  due_date: string | null
+  priority: TaskPriority
+  assignee_id: number | null
+  assignee: UserListItem | null
   column_id: number
   position: number
   created_at: string
@@ -15,11 +25,19 @@ export interface Task {
 /** 任务创建请求 */
 export interface TaskCreateRequest {
   title: string
+  description?: string
+  due_date?: string
+  priority?: TaskPriority
+  assignee_id?: number
 }
 
 /** 任务更新请求 */
 export interface TaskUpdateRequest {
   title?: string
+  description?: string | null
+  due_date?: string | null
+  priority?: TaskPriority
+  assignee_id?: number | null
 }
 
 /** 看板列信息 */

@@ -64,7 +64,7 @@ TBD - created by archiving change add-kanban-core. Update Purpose after archive.
 - **AND** 返回更新后的列列表
 
 ### Requirement: 任务卡片管理
-系统 MUST 提供任务卡片的创建、查看、编辑、删除、拖拽排序功能。
+系统 MUST 提供任务卡片的创建、查看、编辑、删除、拖拽排序功能，并支持任务详情管理。
 
 #### Scenario: 创建任务成功
 - **WHEN** 用户在列中创建新任务
@@ -75,9 +75,28 @@ TBD - created by archiving change add-kanban-core. Update Purpose after archive.
 - **WHEN** 用户提供空的任务标题
 - **THEN** 系统返回错误信息"任务标题不能为空"
 
-#### Scenario: 更新任务
+#### Scenario: 更新任务基本信息
 - **WHEN** 用户更新任务标题
 - **THEN** 系统保存更新后的任务信息
+
+#### Scenario: 更新任务详情
+- **WHEN** 用户更新任务描述、截止日期、优先级或负责人
+- **THEN** 系统保存更新后的任务详情
+
+#### Scenario: 设置任务优先级
+- **WHEN** 用户设置任务优先级为高/中/低
+- **THEN** 系统保存优先级设置
+- **AND** 任务卡片显示对应的优先级标识
+
+#### Scenario: 设置任务截止日期
+- **WHEN** 用户设置任务截止日期
+- **THEN** 系统保存截止日期
+- **AND** 任务卡片显示截止日期
+
+#### Scenario: 指派任务负责人
+- **WHEN** 用户从项目成员中选择负责人
+- **THEN** 系统保存负责人信息
+- **AND** 任务卡片显示负责人
 
 #### Scenario: 删除任务
 - **WHEN** 用户删除任务
@@ -155,4 +174,47 @@ TBD - created by archiving change add-kanban-core. Update Purpose after archive.
 - **WHEN** 用户拖拽列标题
 - **THEN** 列可以左右移动调整顺序
 - **AND** 释放后自动保存新顺序
+
+### Requirement: 任务详情弹窗
+前端 MUST 提供任务详情弹窗，支持查看和编辑任务的完整信息。
+
+#### Scenario: 打开任务详情
+- **WHEN** 用户点击任务卡片
+- **THEN** 弹出任务详情弹窗
+- **AND** 显示任务的标题、描述、截止日期、优先级、负责人
+
+#### Scenario: 编辑任务描述
+- **WHEN** 用户在详情弹窗中编辑任务描述
+- **THEN** 系统保存描述内容
+
+#### Scenario: 选择截止日期
+- **WHEN** 用户点击截止日期选择器
+- **THEN** 显示日期选择组件
+- **AND** 用户选择日期后保存
+
+#### Scenario: 选择优先级
+- **WHEN** 用户点击优先级选择器
+- **THEN** 显示高/中/低三个选项
+- **AND** 用户选择后保存
+
+#### Scenario: 选择负责人
+- **WHEN** 用户点击负责人选择器
+- **THEN** 显示项目成员列表
+- **AND** 用户选择后保存
+
+#### Scenario: 关闭详情弹窗
+- **WHEN** 用户点击关闭按钮或弹窗外部
+- **THEN** 关闭详情弹窗
+- **AND** 看板视图刷新显示最新数据
+
+### Requirement: 获取用户列表
+系统 MUST 提供获取用户列表的接口，用于任务负责人选择。
+
+#### Scenario: 获取用户列表成功
+- **WHEN** 用户请求用户列表
+- **THEN** 系统返回所有用户的基本信息（ID、用户名）
+
+#### Scenario: 未登录获取用户列表
+- **WHEN** 未登录用户请求用户列表
+- **THEN** 系统返回401未授权错误
 

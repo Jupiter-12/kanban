@@ -53,3 +53,13 @@ class TokenData(BaseModel):
     """令牌数据模型。"""
 
     user_id: Optional[int] = None
+
+
+class UserListItem(BaseModel):
+    """用户列表项模型（用于负责人选择）。"""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    username: str
+    display_name: Optional[str] = None

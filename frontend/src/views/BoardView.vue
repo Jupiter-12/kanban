@@ -9,7 +9,8 @@ import { ArrowLeft, Plus } from '@element-plus/icons-vue'
 import draggable from 'vuedraggable'
 import { useBoardStore } from '@/stores'
 import BoardColumn from '@/components/BoardColumn.vue'
-import type { ColumnWithTasks } from '@/types'
+import TaskDetailDialog from '@/components/TaskDetailDialog.vue'
+import type { ColumnWithTasks, Task, TaskPriority } from '@/types'
 
 /** 列拖拽变更事件类型 */
 interface ColumnDragChangeEvent {
@@ -22,6 +23,10 @@ const boardStore = useBoardStore()
 
 const newColumnName = ref('')
 const addingColumn = ref(false)
+
+// 任务详情弹窗状态
+const taskDialogVisible = ref(false)
+const selectedTask = ref<Task | null>(null)
 
 const projectId = computed(() => {
   const id = Number(route.params.id)
@@ -155,6 +160,53 @@ async function onColumnChange(event: ColumnDragChangeEvent) {
     }
   }
 }
+
+/**
+ * 处理任务卡片点击，打开详情弹窗
+ */
+function handleClickTask(task: Task) {
+  // 从 store 获取最新的任务数据
+  const latestTask = boardStore.getTaskById(task.id)
+  selectedTask.value = latestTask || task
+  taskDialogVisible.value = true
+}
+
+/**
+ * 处理任务详情弹窗关闭
+ */
+function handleTaskDialogClose() {
+  // 关闭弹窗时，更新 selectedTask 为 store 中的最新数据
+  if (selectedTask.value) {
+    const latestTask = boardStore.getTaskById(selectedTask.value.id)
+    if (latestTask) {
+      selectedTask.value = latestTask
+    }
+  }
+}
+
+/**
+ * 处理任务详情更新
+ */
+async function handleTaskDetailConfirm(data: {
+  title: string
+  description: string | null
+  due_date: string | null
+  priority: TaskPriority
+  assignee_id: number | null
+}) {
+  if (!selectedTask.value) return
+  try {
+    await boardStore.updateTask(selectedTask.value.id, data)
+    // 更新成功后，同步更新 selectedTask 为最新数据
+    const updatedTask = boardStore.getTaskById(selectedTask.value.id)
+    if (updatedTask) {
+      selectedTask.value = updatedTask
+    }
+    ElMessage.success('任务已更新')
+  } catch {
+    ElMessage.error('更新任务失败')
+  }
+}
 </script>
 
 <template>
@@ -189,6 +241,7 @@ async function onColumnChange(event: ColumnDragChangeEvent) {
               @update-task="handleUpdateTask"
               @delete-task="handleDeleteTask"
               @move-task="handleMoveTask"
+              @click-task="handleClickTask"
             />
           </template>
         </draggable>
@@ -219,6 +272,14 @@ async function onColumnChange(event: ColumnDragChangeEvent) {
         </div>
       </div>
     </div>
+
+    <!-- 任务详情弹窗 -->
+    <TaskDetailDialog
+      v-model:visible="taskDialogVisible"
+      :task="selectedTask"
+      @confirm="handleTaskDetailConfirm"
+      @close="handleTaskDialogClose"
+    />
   </div>
 </template>
 

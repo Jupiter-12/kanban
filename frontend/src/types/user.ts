@@ -14,6 +14,13 @@ export interface User {
   updated_at: string
 }
 
+/** 用户列表项（用于负责人选择） */
+export interface UserListItem {
+  id: number
+  username: string
+  display_name: string | null
+}
+
 /** 用户注册请求 */
 export interface UserRegisterRequest {
   username: string

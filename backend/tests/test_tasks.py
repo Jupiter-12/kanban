@@ -392,6 +392,436 @@ def other_auth_headers(client):
     return {"Authorization": f"Bearer {token}"}
 
 
+class TestTaskDetailFields:
+    """任务详情字段测试。"""
+
+    def test_create_task_with_all_fields(self, client, auth_headers, project_and_column):
+        """测试创建任务时设置所有详情字段。"""
+        column_id = project_and_column["column_id"]
+        task_data = {
+            "title": "完整任务",
+            "description": "这是任务描述",
+            "due_date": "2025-12-31T23:59:59",
+            "priority": "high",
+        }
+        response = client.post(
+            f"/api/columns/{column_id}/tasks",
+            json=task_data,
+            headers=auth_headers,
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["title"] == "完整任务"
+        assert data["description"] == "这是任务描述"
+        assert "2025-12-31" in data["due_date"]
+        assert data["priority"] == "high"
+
+    def test_create_task_with_low_priority(self, client, auth_headers, project_and_column):
+        """测试创建低优先级任务。"""
+        column_id = project_and_column["column_id"]
+        task_data = {"title": "低优先级任务", "priority": "low"}
+        response = client.post(
+            f"/api/columns/{column_id}/tasks",
+            json=task_data,
+            headers=auth_headers,
+        )
+        assert response.status_code == 201
+        assert response.json()["priority"] == "low"
+
+    def test_create_task_default_priority(self, client, auth_headers, project_and_column):
+        """测试创建任务默认优先级为medium。"""
+        column_id = project_and_column["column_id"]
+        task_data = {"title": "默认优先级任务"}
+        response = client.post(
+            f"/api/columns/{column_id}/tasks",
+            json=task_data,
+            headers=auth_headers,
+        )
+        assert response.status_code == 201
+        assert response.json()["priority"] == "medium"
+
+    def test_create_task_invalid_priority(self, client, auth_headers, project_and_column):
+        """测试创建任务时使用无效优先级。"""
+        column_id = project_and_column["column_id"]
+        task_data = {"title": "测试任务", "priority": "invalid"}
+        response = client.post(
+            f"/api/columns/{column_id}/tasks",
+            json=task_data,
+            headers=auth_headers,
+        )
+        assert response.status_code == 422
+
+    def test_update_task_description(self, client, auth_headers, project_and_column):
+        """测试更新任务描述。"""
+        column_id = project_and_column["column_id"]
+
+        # 创建任务
+        create_response = client.post(
+            f"/api/columns/{column_id}/tasks",
+            json={"title": "测试任务"},
+            headers=auth_headers,
+        )
+        task_id = create_response.json()["id"]
+
+        # 更新描述
+        response = client.put(
+            f"/api/tasks/{task_id}",
+            json={"description": "新的描述内容"},
+            headers=auth_headers,
+        )
+        assert response.status_code == 200
+        assert response.json()["description"] == "新的描述内容"
+
+    def test_update_task_clear_description(self, client, auth_headers, project_and_column):
+        """测试清除任务描述。"""
+        column_id = project_and_column["column_id"]
+
+        # 创建带描述的任务
+        create_response = client.post(
+            f"/api/columns/{column_id}/tasks",
+            json={"title": "测试任务", "description": "原始描述"},
+            headers=auth_headers,
+        )
+        task_id = create_response.json()["id"]
+
+        # 清除描述
+        response = client.put(
+            f"/api/tasks/{task_id}",
+            json={"description": None},
+            headers=auth_headers,
+        )
+        assert response.status_code == 200
+        assert response.json()["description"] is None
+
+    def test_update_task_due_date(self, client, auth_headers, project_and_column):
+        """测试更新任务截止日期。"""
+        column_id = project_and_column["column_id"]
+
+        # 创建任务
+        create_response = client.post(
+            f"/api/columns/{column_id}/tasks",
+            json={"title": "测试任务"},
+            headers=auth_headers,
+        )
+        task_id = create_response.json()["id"]
+
+        # 更新截止日期
+        response = client.put(
+            f"/api/tasks/{task_id}",
+            json={"due_date": "2025-06-15T18:00:00"},
+            headers=auth_headers,
+        )
+        assert response.status_code == 200
+        assert "2025-06-15" in response.json()["due_date"]
+
+    def test_update_task_clear_due_date(self, client, auth_headers, project_and_column):
+        """测试清除任务截止日期。"""
+        column_id = project_and_column["column_id"]
+
+        # 创建带截止日期的任务
+        create_response = client.post(
+            f"/api/columns/{column_id}/tasks",
+            json={"title": "测试任务", "due_date": "2025-12-31T23:59:59"},
+            headers=auth_headers,
+        )
+        task_id = create_response.json()["id"]
+
+        # 清除截止日期
+        response = client.put(
+            f"/api/tasks/{task_id}",
+            json={"due_date": None},
+            headers=auth_headers,
+        )
+        assert response.status_code == 200
+        assert response.json()["due_date"] is None
+
+    def test_update_task_priority(self, client, auth_headers, project_and_column):
+        """测试更新任务优先级。"""
+        column_id = project_and_column["column_id"]
+
+        # 创建任务
+        create_response = client.post(
+            f"/api/columns/{column_id}/tasks",
+            json={"title": "测试任务", "priority": "low"},
+            headers=auth_headers,
+        )
+        task_id = create_response.json()["id"]
+
+        # 更新优先级
+        response = client.put(
+            f"/api/tasks/{task_id}",
+            json={"priority": "high"},
+            headers=auth_headers,
+        )
+        assert response.status_code == 200
+        assert response.json()["priority"] == "high"
+
+    def test_update_task_multiple_fields(self, client, auth_headers, project_and_column):
+        """测试同时更新多个字段。"""
+        column_id = project_and_column["column_id"]
+
+        # 创建任务
+        create_response = client.post(
+            f"/api/columns/{column_id}/tasks",
+            json={"title": "原标题"},
+            headers=auth_headers,
+        )
+        task_id = create_response.json()["id"]
+
+        # 同时更新多个字段
+        response = client.put(
+            f"/api/tasks/{task_id}",
+            json={
+                "title": "新标题",
+                "description": "新描述",
+                "priority": "high",
+                "due_date": "2025-12-25T12:00:00",
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["title"] == "新标题"
+        assert data["description"] == "新描述"
+        assert data["priority"] == "high"
+        assert "2025-12-25" in data["due_date"]
+
+    def test_update_task_partial_fields(self, client, auth_headers, project_and_column):
+        """测试部分更新不影响其他字段。"""
+        column_id = project_and_column["column_id"]
+
+        # 创建完整任务
+        create_response = client.post(
+            f"/api/columns/{column_id}/tasks",
+            json={
+                "title": "原标题",
+                "description": "原描述",
+                "priority": "high",
+            },
+            headers=auth_headers,
+        )
+        task_id = create_response.json()["id"]
+
+        # 只更新标题
+        response = client.put(
+            f"/api/tasks/{task_id}",
+            json={"title": "新标题"},
+            headers=auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["title"] == "新标题"
+        assert data["description"] == "原描述"  # 未变
+        assert data["priority"] == "high"  # 未变
+
+
+class TestTaskAssignee:
+    """任务负责人测试。"""
+
+    def test_create_task_with_assignee(self, client, auth_headers, project_and_column):
+        """测试创建任务时指定负责人。"""
+        column_id = project_and_column["column_id"]
+
+        # 获取当前用户ID
+        me_response = client.get("/api/auth/me", headers=auth_headers)
+        user_id = me_response.json()["id"]
+
+        # 创建带负责人的任务
+        task_data = {"title": "有负责人的任务", "assignee_id": user_id}
+        response = client.post(
+            f"/api/columns/{column_id}/tasks",
+            json=task_data,
+            headers=auth_headers,
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["assignee_id"] == user_id
+        assert data["assignee"] is not None
+        assert data["assignee"]["id"] == user_id
+
+    def test_create_task_with_invalid_assignee(self, client, auth_headers, project_and_column):
+        """测试创建任务时指定不存在的负责人。"""
+        column_id = project_and_column["column_id"]
+        task_data = {"title": "测试任务", "assignee_id": 99999}
+        response = client.post(
+            f"/api/columns/{column_id}/tasks",
+            json=task_data,
+            headers=auth_headers,
+        )
+        assert response.status_code == 400
+        assert "不存在" in response.json()["detail"]
+
+    def test_create_task_with_inactive_assignee(self, client, auth_headers, project_and_column):
+        """测试创建任务时指定已禁用的负责人。"""
+        from app.models.database import SessionLocal
+        from app.models.user import User
+
+        column_id = project_and_column["column_id"]
+
+        # 创建另一个用户并禁用
+        other_user_data = {
+            "username": "inactiveuser",
+            "email": "inactive@example.com",
+            "password": "password123",
+        }
+        client.post("/api/auth/register", json=other_user_data)
+
+        # 禁用该用户
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter(User.username == "inactiveuser").first()
+            user_id = user.id
+            user.is_active = False
+            db.commit()
+        finally:
+            db.close()
+
+        # 尝试指定已禁用用户为负责人
+        task_data = {"title": "测试任务", "assignee_id": user_id}
+        response = client.post(
+            f"/api/columns/{column_id}/tasks",
+            json=task_data,
+            headers=auth_headers,
+        )
+        assert response.status_code == 400
+        assert "禁用" in response.json()["detail"]
+
+    def test_update_task_assignee(self, client, auth_headers, project_and_column):
+        """测试更新任务负责人。"""
+        column_id = project_and_column["column_id"]
+
+        # 获取当前用户ID
+        me_response = client.get("/api/auth/me", headers=auth_headers)
+        user_id = me_response.json()["id"]
+
+        # 创建任务
+        create_response = client.post(
+            f"/api/columns/{column_id}/tasks",
+            json={"title": "测试任务"},
+            headers=auth_headers,
+        )
+        task_id = create_response.json()["id"]
+
+        # 更新负责人
+        response = client.put(
+            f"/api/tasks/{task_id}",
+            json={"assignee_id": user_id},
+            headers=auth_headers,
+        )
+        assert response.status_code == 200
+        assert response.json()["assignee_id"] == user_id
+
+    def test_update_task_clear_assignee(self, client, auth_headers, project_and_column):
+        """测试清除任务负责人。"""
+        column_id = project_and_column["column_id"]
+
+        # 获取当前用户ID
+        me_response = client.get("/api/auth/me", headers=auth_headers)
+        user_id = me_response.json()["id"]
+
+        # 创建带负责人的任务
+        create_response = client.post(
+            f"/api/columns/{column_id}/tasks",
+            json={"title": "测试任务", "assignee_id": user_id},
+            headers=auth_headers,
+        )
+        task_id = create_response.json()["id"]
+
+        # 清除负责人
+        response = client.put(
+            f"/api/tasks/{task_id}",
+            json={"assignee_id": None},
+            headers=auth_headers,
+        )
+        assert response.status_code == 200
+        assert response.json()["assignee_id"] is None
+        assert response.json()["assignee"] is None
+
+    def test_update_task_invalid_assignee(self, client, auth_headers, project_and_column):
+        """测试更新任务时指定不存在的负责人。"""
+        column_id = project_and_column["column_id"]
+
+        # 创建任务
+        create_response = client.post(
+            f"/api/columns/{column_id}/tasks",
+            json={"title": "测试任务"},
+            headers=auth_headers,
+        )
+        task_id = create_response.json()["id"]
+
+        # 更新为不存在的负责人
+        response = client.put(
+            f"/api/tasks/{task_id}",
+            json={"assignee_id": 99999},
+            headers=auth_headers,
+        )
+        assert response.status_code == 400
+        assert "不存在" in response.json()["detail"]
+
+    def test_update_task_inactive_assignee(self, client, auth_headers, project_and_column):
+        """测试更新任务时指定已禁用的负责人。"""
+        from app.models.database import SessionLocal
+        from app.models.user import User
+
+        column_id = project_and_column["column_id"]
+
+        # 创建另一个用户并禁用
+        other_user_data = {
+            "username": "inactiveuser2",
+            "email": "inactive2@example.com",
+            "password": "password123",
+        }
+        client.post("/api/auth/register", json=other_user_data)
+
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter(User.username == "inactiveuser2").first()
+            user_id = user.id
+            user.is_active = False
+            db.commit()
+        finally:
+            db.close()
+
+        # 创建任务
+        create_response = client.post(
+            f"/api/columns/{column_id}/tasks",
+            json={"title": "测试任务"},
+            headers=auth_headers,
+        )
+        task_id = create_response.json()["id"]
+
+        # 更新为已禁用的负责人
+        response = client.put(
+            f"/api/tasks/{task_id}",
+            json={"assignee_id": user_id},
+            headers=auth_headers,
+        )
+        assert response.status_code == 400
+        assert "禁用" in response.json()["detail"]
+
+    def test_task_response_includes_assignee_info(self, client, auth_headers, project_and_column):
+        """测试任务响应包含负责人详细信息。"""
+        column_id = project_and_column["column_id"]
+        project_id = project_and_column["project_id"]
+
+        # 获取当前用户
+        me_response = client.get("/api/auth/me", headers=auth_headers)
+        user = me_response.json()
+
+        # 创建带负责人的任务
+        client.post(
+            f"/api/columns/{column_id}/tasks",
+            json={"title": "测试任务", "assignee_id": user["id"]},
+            headers=auth_headers,
+        )
+
+        # 获取项目详情验证任务中的负责人信息
+        detail_response = client.get(f"/api/projects/{project_id}", headers=auth_headers)
+        task = detail_response.json()["columns"][0]["tasks"][0]
+        assert task["assignee"]["id"] == user["id"]
+        assert task["assignee"]["username"] == user["username"]
+
+
 class TestTaskPermission:
     """任务权限测试。"""
 

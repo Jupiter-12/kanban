@@ -72,7 +72,13 @@ def create_task(
             detail="无权访问此列",
         )
 
-    task = task_service.create_task(task_data, column_id)
+    try:
+        task = task_service.create_task(task_data, column_id)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
     return task
 
 
@@ -116,7 +122,13 @@ def update_task(
             detail="无权修改此任务",
         )
 
-    updated_task = task_service.update_task(task_id, task_data)
+    try:
+        updated_task = task_service.update_task(task_id, task_data)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
     return updated_task
 
 

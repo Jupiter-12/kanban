@@ -25,7 +25,7 @@ trap cleanup SIGINT SIGTERM
 echo "[1/2] 启动后端服务 (端口 8000)..."
 cd backend
 # 使用 stdbuf 禁用缓冲，确保日志实时输出
-python -u -m uvicorn main:app --reload --host 0.0.0.0 --port 8000 2>&1 &
+python -u -m uvicorn main:app --reload --reload-exclude tests --host 0.0.0.0 --port 8000 2>&1 &
 BACKEND_PID=$!
 cd ..
 

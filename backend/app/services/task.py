@@ -5,6 +5,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from ..models.task import Task
+from ..models.user import User
 from ..schemas.task import TaskCreate, TaskUpdate
 
 
@@ -19,6 +20,23 @@ class TaskService:
         """
         self.db = db
 
+    def _validate_assignee(self, assignee_id: Optional[int]) -> None:
+        """验证负责人是否存在且有效。
+
+        Args:
+            assignee_id: 负责人ID
+
+        Raises:
+            ValueError: 如果负责人不存在或已禁用
+        """
+        if assignee_id is None:
+            return
+        user = self.db.query(User).filter(User.id == assignee_id).first()
+        if not user:
+            raise ValueError("指定的负责人不存在")
+        if not user.is_active:
+            raise ValueError("指定的负责人已被禁用")
+
     def create_task(self, task_data: TaskCreate, column_id: int) -> Task:
         """创建新任务。
 
@@ -28,7 +46,13 @@ class TaskService:
 
         Returns:
             创建的任务对象
+
+        Raises:
+            ValueError: 如果负责人不存在或已禁用
         """
+        # 验证负责人
+        self._validate_assignee(task_data.assignee_id)
+
         # 获取当前列的最大位置
         max_position = (
             self.db.query(Task)
@@ -38,6 +62,10 @@ class TaskService:
 
         db_task = Task(
             title=task_data.title,
+            description=task_data.description,
+            due_date=task_data.due_date,
+            priority=task_data.priority.value if task_data.priority else "medium",
+            assignee_id=task_data.assignee_id,
             column_id=column_id,
             position=max_position,
         )
@@ -82,13 +110,26 @@ class TaskService:
 
         Returns:
             更新后的任务对象，如果不存在则返回None
+
+        Raises:
+            ValueError: 如果负责人不存在或已禁用
         """
         db_task = self.get_task_by_id(task_id)
         if not db_task:
             return None
 
+        # 使用 exclude_unset=True 只更新显式设置的字段
+        # 但需要特殊处理可以设置为 None 的字段（如 assignee_id）
         update_data = task_data.model_dump(exclude_unset=True)
+
+        # 如果更新了负责人，验证负责人是否有效
+        if "assignee_id" in update_data:
+            self._validate_assignee(update_data["assignee_id"])
+
         for field, value in update_data.items():
+            # 处理优先级枚举值
+            if field == "priority" and value is not None:
+                value = value.value if hasattr(value, "value") else value
             setattr(db_task, field, value)
 
         self.db.commit()

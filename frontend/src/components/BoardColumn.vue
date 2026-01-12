@@ -26,6 +26,7 @@ const emit = defineEmits<{
   updateTask: [taskId: number, title: string]
   deleteTask: [taskId: number]
   moveTask: [taskId: number, sourceColumnId: number, targetColumnId: number, newPosition: number]
+  clickTask: [task: Task]
 }>()
 
 const editing = ref(false)
@@ -135,6 +136,7 @@ function onTaskChange(event: DragChangeEvent) {
             :task="task"
             @update="(title) => emit('updateTask', task.id, title)"
             @delete="emit('deleteTask', task.id)"
+            @click="emit('clickTask', task)"
           />
         </template>
       </draggable>

@@ -18,7 +18,7 @@ if not exist "frontend" (
 )
 
 echo [1/2] Starting backend service (port 8000)...
-start "Backend" cmd /k "cd backend && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000"
+start "Backend" cmd /k "cd backend && python -m uvicorn main:app --reload --reload-exclude tests --host 0.0.0.0 --port 8000"
 
 echo [2/2] Starting frontend service (port 5173)...
 timeout /t 2 >nul
