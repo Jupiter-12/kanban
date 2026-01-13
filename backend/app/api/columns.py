@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..deps import get_current_user
 from ..models.database import get_db
-from ..models.user import User
+from ..models.user import User, UserRole
 from ..schemas.column import (
     ColumnCreate,
     ColumnReorder,
@@ -28,6 +28,13 @@ def get_column_service(db: Session = Depends(get_db)) -> ColumnService:
 def get_project_service(db: Session = Depends(get_db)) -> ProjectService:
     """获取项目服务实例。"""
     return ProjectService(db)
+
+
+def can_edit_project(user: User, project) -> bool:
+    """检查用户是否有权限编辑项目。"""
+    if user.role in [UserRole.OWNER.value, UserRole.ADMIN.value]:
+        return True
+    return project.owner_id == user.id
 
 
 @router.post(
@@ -63,7 +70,7 @@ def create_column(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="项目不存在",
         )
-    if project.owner_id != current_user.id:
+    if not can_edit_project(current_user, project):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="无权访问此项目",
@@ -110,7 +117,7 @@ def reorder_columns(
         )
 
     project = project_service.get_project_by_id(first_column.project_id)
-    if project.owner_id != current_user.id:
+    if not can_edit_project(current_user, project):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="无权修改此项目的列",
@@ -165,7 +172,7 @@ def update_column(
         )
 
     project = project_service.get_project_by_id(column.project_id)
-    if project.owner_id != current_user.id:
+    if not can_edit_project(current_user, project):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="无权修改此列",
@@ -201,7 +208,7 @@ def delete_column(
         )
 
     project = project_service.get_project_by_id(column.project_id)
-    if project.owner_id != current_user.id:
+    if not can_edit_project(current_user, project):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="无权删除此列",

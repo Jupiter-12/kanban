@@ -40,6 +40,9 @@ def get_current_user_optional(
 
     Returns:
         当前用户对象，如果未认证则返回None
+
+    Raises:
+        HTTPException: 如果用户账户已被禁用
     """
     if not credentials:
         return None
@@ -64,8 +67,15 @@ def get_current_user_optional(
         return None
 
     user = auth_service.get_user_by_id(user_id)
-    if not user or not user.is_active:
+    if not user:
         return None
+
+    # 用户被禁用时抛出明确的错误提示
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="您的账户已被禁用，请联系管理员",
+        )
 
     return user
 

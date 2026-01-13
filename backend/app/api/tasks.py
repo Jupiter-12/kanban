@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from ..deps import get_current_user
 from ..models.database import get_db
-from ..models.user import User
+from ..models.user import User, UserRole
 from ..schemas.task import TaskCreate, TaskMove, TaskResponse, TaskUpdate
 from ..services.column import ColumnService
 from ..services.project import ProjectService
@@ -27,6 +27,13 @@ def get_column_service(db: Session = Depends(get_db)) -> ColumnService:
 def get_project_service(db: Session = Depends(get_db)) -> ProjectService:
     """获取项目服务实例。"""
     return ProjectService(db)
+
+
+def can_edit_project(user: User, project) -> bool:
+    """检查用户是否有权限编辑项目。"""
+    if user.role in [UserRole.OWNER.value, UserRole.ADMIN.value]:
+        return True
+    return project.owner_id == user.id
 
 
 @router.post(
@@ -66,7 +73,7 @@ def create_task(
         )
 
     project = project_service.get_project_by_id(column.project_id)
-    if project.owner_id != current_user.id:
+    if not can_edit_project(current_user, project):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="无权访问此列",
@@ -116,7 +123,7 @@ def update_task(
 
     column = column_service.get_column_by_id(task.column_id)
     project = project_service.get_project_by_id(column.project_id)
-    if project.owner_id != current_user.id:
+    if not can_edit_project(current_user, project):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="无权修改此任务",
@@ -161,7 +168,7 @@ def delete_task(
 
     column = column_service.get_column_by_id(task.column_id)
     project = project_service.get_project_by_id(column.project_id)
-    if project.owner_id != current_user.id:
+    if not can_edit_project(current_user, project):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="无权删除此任务",
@@ -205,7 +212,7 @@ def move_task(
     # 验证源列权限
     source_column = column_service.get_column_by_id(task.column_id)
     source_project = project_service.get_project_by_id(source_column.project_id)
-    if source_project.owner_id != current_user.id:
+    if not can_edit_project(current_user, source_project):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="无权移动此任务",

@@ -7,7 +7,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, Plus } from '@element-plus/icons-vue'
 import draggable from 'vuedraggable'
-import { useBoardStore } from '@/stores'
+import { useBoardStore, useAuthStore } from '@/stores'
 import BoardColumn from '@/components/BoardColumn.vue'
 import TaskDetailDialog from '@/components/TaskDetailDialog.vue'
 import type { ColumnWithTasks, Task, TaskPriority } from '@/types'
@@ -20,6 +20,7 @@ interface ColumnDragChangeEvent {
 const route = useRoute()
 const router = useRouter()
 const boardStore = useBoardStore()
+const authStore = useAuthStore()
 
 const newColumnName = ref('')
 const addingColumn = ref(false)
@@ -32,6 +33,23 @@ const projectId = computed(() => {
   const id = Number(route.params.id)
   return Number.isNaN(id) ? null : id
 })
+
+// 当前用户ID和角色
+const currentUserId = computed(() => authStore.currentUser?.id)
+const currentUserRole = computed(() => authStore.currentUser?.role)
+
+// 判断当前用户是否有编辑权限
+const canEdit = computed(() => {
+  // 所有者和管理员可以编辑任意项目
+  if (currentUserRole.value === 'owner' || currentUserRole.value === 'admin') {
+    return true
+  }
+  // 普通用户只能编辑自己创建的项目
+  return boardStore.currentProject?.owner_id === currentUserId.value
+})
+
+// 是否为只读模式
+const isReadonly = computed(() => !canEdit.value)
 
 onMounted(async () => {
   if (projectId.value === null) {
@@ -47,7 +65,8 @@ onUnmounted(() => {
 })
 
 function goBack() {
-  router.push('/projects')
+  // 使用浏览器历史返回，保持用户的导航上下文
+  router.back()
 }
 
 function startAddColumn() {
@@ -215,6 +234,7 @@ async function handleTaskDetailConfirm(data: {
       <div class="header-left">
         <el-button :icon="ArrowLeft" @click="goBack">返回</el-button>
         <h1>{{ boardStore.projectName }}</h1>
+        <el-tag v-if="isReadonly" type="info" size="small">只读</el-tag>
       </div>
     </div>
 
@@ -230,11 +250,13 @@ async function handleTaskDetailConfirm(data: {
           class="columns-draggable"
           handle=".column-header"
           :animation="150"
+          :disabled="isReadonly"
           @change="onColumnChange"
         >
           <template #item="{ element: column }">
             <BoardColumn
               :column="column"
+              :readonly="isReadonly"
               @update-column="handleUpdateColumn"
               @delete-column="handleDeleteColumn"
               @create-task="handleCreateTask"
@@ -246,7 +268,7 @@ async function handleTaskDetailConfirm(data: {
           </template>
         </draggable>
 
-        <div class="add-column">
+        <div class="add-column" v-if="!isReadonly">
           <div v-if="addingColumn" class="add-column-form">
             <el-input
               v-model="newColumnName"
@@ -277,6 +299,7 @@ async function handleTaskDetailConfirm(data: {
     <TaskDetailDialog
       v-model:visible="taskDialogVisible"
       :task="selectedTask"
+      :readonly="isReadonly"
       @confirm="handleTaskDetailConfirm"
       @close="handleTaskDialogClose"
     />

@@ -17,6 +17,7 @@ interface DragChangeEvent {
 
 const props = defineProps<{
   column: ColumnWithTasks
+  readonly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -101,11 +102,11 @@ function onTaskChange(event: DragChangeEvent) {
           @blur="confirmEdit(column.id)"
         />
       </div>
-      <h3 v-else class="column-title" @dblclick="startEdit(column.name)">
+      <h3 v-else class="column-title" @dblclick="!readonly && startEdit(column.name)">
         {{ column.name }}
         <span class="task-count">({{ column.tasks.length }})</span>
       </h3>
-      <div class="column-actions">
+      <div class="column-actions" v-if="!readonly">
         <el-button
           :icon="Edit"
           size="small"
@@ -129,11 +130,13 @@ function onTaskChange(event: DragChangeEvent) {
         item-key="id"
         class="task-list"
         :animation="150"
+        :disabled="readonly"
         @change="onTaskChange"
       >
         <template #item="{ element: task }">
           <TaskCard
             :task="task"
+            :readonly="readonly"
             @update="(title) => emit('updateTask', task.id, title)"
             @delete="emit('deleteTask', task.id)"
             @click="emit('clickTask', task)"
@@ -141,7 +144,7 @@ function onTaskChange(event: DragChangeEvent) {
         </template>
       </draggable>
 
-      <div v-if="addingTask" class="add-task-form">
+      <div v-if="addingTask && !readonly" class="add-task-form">
         <el-input
           v-model="newTaskTitle"
           type="textarea"
@@ -163,7 +166,7 @@ function onTaskChange(event: DragChangeEvent) {
       </div>
     </div>
 
-    <div class="column-footer">
+    <div class="column-footer" v-if="!readonly">
       <el-button
         v-if="!addingTask"
         class="add-task-btn"

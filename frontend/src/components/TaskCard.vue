@@ -8,6 +8,7 @@ import type { Task } from '@/types'
 
 const props = defineProps<{
   task: Task
+  readonly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -115,7 +116,7 @@ function handleDelete(event: Event) {
         />
       </div>
       <template v-else>
-        <div class="task-content" @dblclick="startEdit(task.title, $event)">
+        <div class="task-content" @dblclick="!readonly && startEdit(task.title, $event)">
           {{ task.title }}
         </div>
         <div class="task-meta">
@@ -139,7 +140,7 @@ function handleDelete(event: Event) {
         </div>
       </template>
     </div>
-    <div class="task-actions" @click.stop>
+    <div class="task-actions" v-if="!readonly" @click.stop>
       <el-button
         :icon="Delete"
         size="small"

@@ -63,7 +63,8 @@ instance.interceptors.response.use(
         // 登录/注册接口的401，显示具体错误信息
         ElMessage.error(message)
       } else if (status === 403) {
-        ElMessage.error('没有权限执行此操作')
+        // 显示后端返回的具体错误信息（如账户被禁用等）
+        ElMessage.error(message)
       } else if (status === 429) {
         // 请求过于频繁（速率限制）
         ElMessage.warning(message)

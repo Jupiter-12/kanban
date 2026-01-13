@@ -344,12 +344,13 @@ class TestDeps:
         finally:
             db.close()
 
-        # 使用该令牌访问/me应该返回401
+        # 使用该令牌访问/me应该返回403（账户已被禁用）
         response = client.get(
             "/api/auth/me",
             headers={"Authorization": f"Bearer {token}"}
         )
-        assert response.status_code == 401
+        assert response.status_code == 403
+        assert "禁用" in response.json()["detail"]
 
     def test_get_current_user_optional_with_no_sub(self, client):
         """测试令牌中没有sub字段时返回None。"""

@@ -13,9 +13,26 @@ const authStore = useAuthStore()
 
 const user = computed(() => authStore.currentUser)
 const displayName = computed(() => user.value?.display_name || user.value?.username || '')
+const isOwner = computed(() => user.value?.role === 'owner')
+const roleLabel = computed(() => {
+  const labels: Record<string, string> = {
+    owner: '所有者',
+    admin: '管理员',
+    user: '普通用户'
+  }
+  return labels[user.value?.role || 'user'] || '普通用户'
+})
 
 function goToProjects() {
   router.push('/projects')
+}
+
+function goToUserManage() {
+  router.push('/users')
+}
+
+function goToProfile() {
+  router.push('/profile')
 }
 
 async function handleLogout() {
@@ -45,7 +62,8 @@ async function handleLogout() {
         class="header-menu"
         router
       >
-        <el-menu-item index="/projects">我的项目</el-menu-item>
+        <el-menu-item index="/projects/my">我的项目</el-menu-item>
+        <el-menu-item index="/projects/all">所有项目</el-menu-item>
       </el-menu>
     </div>
     <div class="header-right">
@@ -59,7 +77,16 @@ async function handleLogout() {
         </span>
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item @click="handleLogout">退出登录</el-dropdown-item>
+            <el-dropdown-item disabled>
+              <span class="role-label">{{ roleLabel }}</span>
+            </el-dropdown-item>
+            <el-dropdown-item divided @click="goToProfile">
+              个人设置
+            </el-dropdown-item>
+            <el-dropdown-item v-if="isOwner" @click="goToUserManage">
+              用户管理
+            </el-dropdown-item>
+            <el-dropdown-item divided @click="handleLogout">退出登录</el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>
@@ -135,5 +162,10 @@ export default {
   margin-left: 8px;
   font-size: 14px;
   color: #606266;
+}
+
+.role-label {
+  font-size: 12px;
+  color: #909399;
 }
 </style>

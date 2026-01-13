@@ -83,6 +83,40 @@ class ProjectService:
             .all()
         )
 
+    def get_all_projects(self) -> List[Project]:
+        """获取所有项目。
+
+        Returns:
+            项目列表
+        """
+        return (
+            self.db.query(Project)
+            .order_by(Project.created_at.desc())
+            .all()
+        )
+
+    def get_all_projects_paginated(
+        self, page: int = 1, page_size: int = 10
+    ) -> tuple[List[Project], int]:
+        """获取所有项目（分页）。
+
+        Args:
+            page: 页码（从1开始）
+            page_size: 每页数量
+
+        Returns:
+            (项目列表, 总数量)
+        """
+        query = self.db.query(Project)
+        total = query.count()
+        projects = (
+            query.order_by(Project.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+            .all()
+        )
+        return projects, total
+
     def get_projects_by_owner_paginated(
         self, owner_id: int, page: int = 1, page_size: int = 10
     ) -> tuple[List[Project], int]:

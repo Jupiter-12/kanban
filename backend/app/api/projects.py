@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..deps import get_current_user
 from ..models.database import get_db
-from ..models.user import User
+from ..models.user import User, UserRole
 from ..schemas.project import (
     PaginatedResponse,
     ProjectCreate,
@@ -23,6 +23,23 @@ router = APIRouter(prefix="/projects", tags=["项目"])
 def get_project_service(db: Session = Depends(get_db)) -> ProjectService:
     """获取项目服务实例。"""
     return ProjectService(db)
+
+
+def can_edit_project(user: User, project) -> bool:
+    """检查用户是否有权限编辑项目。
+
+    Args:
+        user: 当前用户
+        project: 项目对象
+
+    Returns:
+        是否有编辑权限
+    """
+    # 所有者和管理员可以编辑任意项目
+    if user.role in [UserRole.OWNER.value, UserRole.ADMIN.value]:
+        return True
+    # 普通用户只能编辑自己创建的项目
+    return project.owner_id == user.id
 
 
 @router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
@@ -52,7 +69,7 @@ def get_projects(
     current_user: User = Depends(get_current_user),
     project_service: ProjectService = Depends(get_project_service),
 ) -> List[ProjectResponse]:
-    """获取当前用户的所有项目。
+    """获取所有项目。
 
     Args:
         page: 页码（可选，不传则返回全部）
@@ -63,7 +80,7 @@ def get_projects(
     Returns:
         项目列表
     """
-    return project_service.get_projects_by_owner(current_user.id)
+    return project_service.get_all_projects()
 
 
 @router.get("/paginated", response_model=PaginatedResponse[ProjectResponse])
@@ -73,7 +90,7 @@ def get_projects_paginated(
     current_user: User = Depends(get_current_user),
     project_service: ProjectService = Depends(get_project_service),
 ) -> PaginatedResponse[ProjectResponse]:
-    """获取当前用户的项目（分页）。
+    """获取所有项目（分页）。
 
     Args:
         page: 页码
@@ -84,9 +101,7 @@ def get_projects_paginated(
     Returns:
         分页的项目列表
     """
-    projects, total = project_service.get_projects_by_owner_paginated(
-        current_user.id, page, page_size
-    )
+    projects, total = project_service.get_all_projects_paginated(page, page_size)
     total_pages = (total + page_size - 1) // page_size
     return PaginatedResponse(
         items=projects,
@@ -114,7 +129,7 @@ def get_project(
         项目详情
 
     Raises:
-        HTTPException: 如果项目不存在或无权访问
+        HTTPException: 如果项目不存在
     """
     project = project_service.get_project_by_id(project_id)
     if not project:
@@ -122,11 +137,7 @@ def get_project(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="项目不存在",
         )
-    if project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="无权访问此项目",
-        )
+    # 所有用户都可以查看任意项目
     return project
 
 
@@ -157,7 +168,7 @@ def update_project(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="项目不存在",
         )
-    if project.owner_id != current_user.id:
+    if not can_edit_project(current_user, project):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="无权修改此项目",
@@ -189,7 +200,7 @@ def delete_project(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="项目不存在",
         )
-    if project.owner_id != current_user.id:
+    if not can_edit_project(current_user, project):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="无权删除此项目",

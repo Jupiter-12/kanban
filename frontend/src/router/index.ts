@@ -26,17 +26,39 @@ const routes: RouteRecordRaw[] = [
       {
         path: '',
         name: 'Home',
-        redirect: '/projects'
+        redirect: '/projects/my'
       },
       {
         path: 'projects',
-        name: 'Projects',
-        component: () => import('@/views/ProjectList.vue')
+        redirect: '/projects/my'
+      },
+      {
+        path: 'projects/my',
+        name: 'MyProjects',
+        component: () => import('@/views/ProjectList.vue'),
+        meta: { filter: 'my' }
+      },
+      {
+        path: 'projects/all',
+        name: 'AllProjects',
+        component: () => import('@/views/ProjectList.vue'),
+        meta: { filter: 'all' }
       },
       {
         path: 'projects/:id',
         name: 'Board',
         component: () => import('@/views/BoardView.vue')
+      },
+      {
+        path: 'users',
+        name: 'UserManage',
+        component: () => import('@/views/UserManageView.vue'),
+        meta: { requiresOwner: true }
+      },
+      {
+        path: 'profile',
+        name: 'Profile',
+        component: () => import('@/views/ProfileView.vue')
       }
     ]
   }
@@ -75,10 +97,14 @@ const createAuthGuard = () => {
     }
 
     const requiresAuth = to.matched.some((record) => record.meta.requiresAuth !== false)
+    const requiresOwner = to.matched.some((record) => record.meta.requiresOwner === true)
 
     if (requiresAuth && !authStore.isAuthenticated) {
       // 需要认证但未登录，跳转登录页
       next({ name: 'Login', query: { redirect: to.fullPath } })
+    } else if (requiresOwner && authStore.user?.role !== 'owner') {
+      // 需要所有者权限但当前用户不是所有者，跳转首页
+      next({ name: 'Home' })
     } else if (!requiresAuth && authStore.isAuthenticated && (to.name === 'Login' || to.name === 'Register')) {
       // 已登录用户访问登录/注册页，跳转首页
       next({ name: 'Home' })

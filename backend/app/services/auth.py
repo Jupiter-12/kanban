@@ -5,7 +5,7 @@ from typing import Optional
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from ..models.user import User
+from ..models.user import User, UserRole
 from ..schemas.user import UserCreate
 from ..utils.security import get_password_hash, verify_password
 
@@ -63,12 +63,16 @@ class AuthService:
         Returns:
             创建的用户对象
         """
+        # 检查是否是系统中的第一个用户
+        is_first_user = self.db.query(User).count() == 0
+
         hashed_password = get_password_hash(user_data.password)
         db_user = User(
             username=user_data.username,
             email=user_data.email,
             password_hash=hashed_password,
             display_name=user_data.display_name or user_data.username,
+            role=UserRole.OWNER.value if is_first_user else UserRole.USER.value,
         )
         self.db.add(db_user)
         try:

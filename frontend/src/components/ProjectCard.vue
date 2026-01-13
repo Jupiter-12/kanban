@@ -7,6 +7,7 @@ import type { Project } from '@/types'
 
 defineProps<{
   project: Project
+  readonly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -30,7 +31,7 @@ function handleDelete(event: Event) {
   <el-card class="project-card" shadow="hover" @click="emit('click')">
     <div class="card-header">
       <h3 class="project-name">{{ project.name }}</h3>
-      <div class="card-actions">
+      <div class="card-actions" v-if="!readonly">
         <el-button
           :icon="Edit"
           size="small"
@@ -45,6 +46,7 @@ function handleDelete(event: Event) {
           @click="handleDelete"
         />
       </div>
+      <el-tag v-else size="small" type="info" class="readonly-tag">只读</el-tag>
     </div>
     <p class="project-description">
       {{ project.description || '暂无描述' }}
@@ -107,5 +109,9 @@ function handleDelete(event: Event) {
 .project-meta {
   font-size: 12px;
   color: #c0c4cc;
+}
+
+.readonly-tag {
+  flex-shrink: 0;
 }
 </style>

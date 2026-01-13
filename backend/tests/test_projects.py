@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from main import app
 from app.models.database import Base, engine, SessionLocal
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.models.project import Project
 from app.models.column import KanbanColumn
 from app.models.task import Task
@@ -129,19 +129,27 @@ class TestProjectList:
         data = response.json()
         assert len(data) == 2
 
-    def test_get_projects_only_own(self, client, auth_headers, other_auth_headers):
-        """测试只能获取自己的项目。"""
+    def test_get_all_projects_visible(self, client, auth_headers, other_auth_headers):
+        """测试所有用户可以查看所有项目。"""
         # 用户1创建项目
         client.post("/api/projects", json={"name": "用户1的项目"}, headers=auth_headers)
         # 用户2创建项目
         client.post("/api/projects", json={"name": "用户2的项目"}, headers=other_auth_headers)
 
-        # 用户1只能看到自己的项目
+        # 用户1可以看到所有项目
         response = client.get("/api/projects", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
-        assert len(data) == 1
-        assert data[0]["name"] == "用户1的项目"
+        assert len(data) == 2
+        names = [p["name"] for p in data]
+        assert "用户1的项目" in names
+        assert "用户2的项目" in names
+
+        # 用户2也可以看到所有项目
+        response = client.get("/api/projects", headers=other_auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 2
 
 
 class TestProjectDetail:
@@ -170,8 +178,8 @@ class TestProjectDetail:
         assert response.status_code == 404
         assert "项目不存在" in response.json()["detail"]
 
-    def test_get_project_forbidden(self, client, auth_headers, other_auth_headers):
-        """测试访问他人项目。"""
+    def test_get_other_user_project_allowed(self, client, auth_headers, other_auth_headers):
+        """测试可以查看他人项目。"""
         # 用户1创建项目
         create_response = client.post(
             "/api/projects",
@@ -180,56 +188,10 @@ class TestProjectDetail:
         )
         project_id = create_response.json()["id"]
 
-        # 用户2尝试访问
+        # 用户2可以查看
         response = client.get(f"/api/projects/{project_id}", headers=other_auth_headers)
-        assert response.status_code == 403
-        assert "无权访问" in response.json()["detail"]
-
-
-class TestProjectUpdate:
-    """项目更新测试。"""
-
-    def test_update_project_success(self, client, auth_headers):
-        """测试更新项目成功。"""
-        # 创建项目
-        create_response = client.post(
-            "/api/projects",
-            json={"name": "原名称"},
-            headers=auth_headers,
-        )
-        project_id = create_response.json()["id"]
-
-        # 更新项目
-        response = client.put(
-            f"/api/projects/{project_id}",
-            json={"name": "新名称", "description": "新描述"},
-            headers=auth_headers,
-        )
         assert response.status_code == 200
-        data = response.json()
-        assert data["name"] == "新名称"
-        assert data["description"] == "新描述"
-
-    def test_update_project_partial(self, client, auth_headers):
-        """测试部分更新项目。"""
-        # 创建项目
-        create_response = client.post(
-            "/api/projects",
-            json={"name": "原名称", "description": "原描述"},
-            headers=auth_headers,
-        )
-        project_id = create_response.json()["id"]
-
-        # 只更新名称
-        response = client.put(
-            f"/api/projects/{project_id}",
-            json={"name": "新名称"},
-            headers=auth_headers,
-        )
-        assert response.status_code == 200
-        data = response.json()
-        assert data["name"] == "新名称"
-        assert data["description"] == "原描述"
+        assert response.json()["name"] == "用户1的项目"
 
 
 class TestProjectPaginated:
@@ -428,3 +390,135 @@ class TestProjectDelete:
         # 验证项目已删除
         get_response = client.get(f"/api/projects/{project_id}", headers=auth_headers)
         assert get_response.status_code == 404
+
+
+class TestProjectRolePermissions:
+    """项目角色权限测试。"""
+
+    def test_owner_can_edit_any_project(self, client, auth_headers, other_auth_headers):
+        """测试所有者可以编辑任意项目。"""
+        # 用户2创建项目（用户1是所有者）
+        create_response = client.post(
+            "/api/projects",
+            json={"name": "用户2的项目"},
+            headers=other_auth_headers,
+        )
+        project_id = create_response.json()["id"]
+
+        # 用户1（所有者）可以编辑
+        response = client.put(
+            f"/api/projects/{project_id}",
+            json={"name": "所有者修改的名称"},
+            headers=auth_headers,
+        )
+        assert response.status_code == 200
+        assert response.json()["name"] == "所有者修改的名称"
+
+    def test_admin_can_edit_any_project(self, client, auth_headers, other_auth_headers):
+        """测试管理员可以编辑任意项目。"""
+        # 创建第三个用户并设置为管理员
+        admin_user = {
+            "username": "adminuser",
+            "email": "admin@example.com",
+            "password": "password123",
+        }
+        client.post("/api/auth/register", json=admin_user)
+
+        db = SessionLocal()
+        try:
+            admin = db.query(User).filter(User.username == "adminuser").first()
+            admin.role = UserRole.ADMIN.value
+            db.commit()
+        finally:
+            db.close()
+
+        # 管理员登录
+        login_response = client.post("/api/auth/login", json={
+            "username": "adminuser",
+            "password": "password123",
+        })
+        admin_headers = {"Authorization": f"Bearer {login_response.json()['access_token']}"}
+
+        # 用户2创建项目
+        create_response = client.post(
+            "/api/projects",
+            json={"name": "用户2的项目"},
+            headers=other_auth_headers,
+        )
+        project_id = create_response.json()["id"]
+
+        # 管理员可以编辑
+        response = client.put(
+            f"/api/projects/{project_id}",
+            json={"name": "管理员修改的名称"},
+            headers=admin_headers,
+        )
+        assert response.status_code == 200
+        assert response.json()["name"] == "管理员修改的名称"
+
+    def test_normal_user_cannot_edit_others_project(self, client, auth_headers, other_auth_headers):
+        """测试普通用户不能编辑他人项目。"""
+        # 用户1创建项目（用户1是所有者，用户2是普通用户）
+        create_response = client.post(
+            "/api/projects",
+            json={"name": "用户1的项目"},
+            headers=auth_headers,
+        )
+        project_id = create_response.json()["id"]
+
+        # 用户2（普通用户）不能编辑
+        response = client.put(
+            f"/api/projects/{project_id}",
+            json={"name": "用户2尝试修改"},
+            headers=other_auth_headers,
+        )
+        assert response.status_code == 403
+        assert "无权修改" in response.json()["detail"]
+
+    def test_normal_user_can_edit_own_project(self, client, auth_headers, other_auth_headers):
+        """测试普通用户可以编辑自己的项目。"""
+        # 用户2创建项目
+        create_response = client.post(
+            "/api/projects",
+            json={"name": "用户2的项目"},
+            headers=other_auth_headers,
+        )
+        project_id = create_response.json()["id"]
+
+        # 用户2可以编辑自己的项目
+        response = client.put(
+            f"/api/projects/{project_id}",
+            json={"name": "用户2修改的名称"},
+            headers=other_auth_headers,
+        )
+        assert response.status_code == 200
+        assert response.json()["name"] == "用户2修改的名称"
+
+    def test_owner_can_delete_any_project(self, client, auth_headers, other_auth_headers):
+        """测试所有者可以删除任意项目。"""
+        # 用户2创建项目
+        create_response = client.post(
+            "/api/projects",
+            json={"name": "用户2的项目"},
+            headers=other_auth_headers,
+        )
+        project_id = create_response.json()["id"]
+
+        # 用户1（所有者）可以删除
+        response = client.delete(f"/api/projects/{project_id}", headers=auth_headers)
+        assert response.status_code == 204
+
+    def test_normal_user_cannot_delete_others_project(self, client, auth_headers, other_auth_headers):
+        """测试普通用户不能删除他人项目。"""
+        # 用户1创建项目
+        create_response = client.post(
+            "/api/projects",
+            json={"name": "用户1的项目"},
+            headers=auth_headers,
+        )
+        project_id = create_response.json()["id"]
+
+        # 用户2（普通用户）不能删除
+        response = client.delete(f"/api/projects/{project_id}", headers=other_auth_headers)
+        assert response.status_code == 403
+        assert "无权删除" in response.json()["detail"]

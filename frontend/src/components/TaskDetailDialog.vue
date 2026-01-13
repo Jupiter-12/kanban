@@ -9,6 +9,7 @@ import type { Task, TaskPriority, UserListItem } from '@/types'
 const props = defineProps<{
   visible: boolean
   task: Task | null
+  readonly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -48,7 +49,10 @@ const priorityOptions = [
   { value: 'low', label: '低', color: '#909399' }
 ]
 
-const dialogTitle = computed(() => props.task ? '编辑任务' : '创建任务')
+const dialogTitle = computed(() => {
+  if (props.readonly) return '查看任务'
+  return props.task ? '编辑任务' : '创建任务'
+})
 
 watch(
   () => props.visible,
@@ -143,6 +147,7 @@ function getUserDisplayName(user: UserListItem): string {
           placeholder="请输入任务标题"
           maxlength="200"
           show-word-limit
+          :disabled="readonly"
         />
       </el-form-item>
       <el-form-item label="描述" prop="description">
@@ -151,6 +156,7 @@ function getUserDisplayName(user: UserListItem): string {
           type="textarea"
           placeholder="请输入任务描述（可选）"
           :rows="4"
+          :disabled="readonly"
         />
       </el-form-item>
       <el-form-item label="截止日期" prop="due_date">
@@ -160,10 +166,11 @@ function getUserDisplayName(user: UserListItem): string {
           placeholder="选择截止日期"
           format="YYYY-MM-DD HH:mm"
           style="width: 100%"
+          :disabled="readonly"
         />
       </el-form-item>
       <el-form-item label="优先级" prop="priority">
-        <el-select v-model="form.priority" style="width: 100%">
+        <el-select v-model="form.priority" style="width: 100%" :disabled="readonly">
           <el-option
             v-for="option in priorityOptions"
             :key="option.value"
@@ -187,6 +194,7 @@ function getUserDisplayName(user: UserListItem): string {
           clearable
           :loading="loadingUsers"
           style="width: 100%"
+          :disabled="readonly"
         >
           <el-option
             v-for="user in users"
@@ -198,8 +206,8 @@ function getUserDisplayName(user: UserListItem): string {
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="handleClose">取消</el-button>
-      <el-button type="primary" @click="handleConfirm">
+      <el-button @click="handleClose">{{ readonly ? '关闭' : '取消' }}</el-button>
+      <el-button v-if="!readonly" type="primary" @click="handleConfirm">
         {{ task ? '保存' : '创建' }}
       </el-button>
     </template>

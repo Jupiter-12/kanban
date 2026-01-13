@@ -1,9 +1,17 @@
 """用户相关的Pydantic模型。"""
 
 from datetime import datetime
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+
+class UserRoleEnum(str, Enum):
+    """用户角色枚举。"""
+    OWNER = "owner"  # 所有者（超级管理员）
+    ADMIN = "admin"  # 管理员
+    USER = "user"    # 普通用户
 
 
 class UserBase(BaseModel):
@@ -37,6 +45,7 @@ class UserResponse(BaseModel):
     email: str  # 使用str而不是EmailStr，避免响应验证问题
     display_name: Optional[str] = None
     avatar_url: Optional[str] = None
+    role: str = Field(default="user", description="用户角色")
     is_active: bool
     created_at: datetime
     updated_at: datetime
@@ -63,3 +72,28 @@ class UserListItem(BaseModel):
     id: int
     username: str
     display_name: Optional[str] = None
+    role: str = Field(default="user", description="用户角色")
+
+
+class UserRoleUpdate(BaseModel):
+    """用户角色更新请求模型。"""
+
+    role: UserRoleEnum = Field(..., description="新角色")
+
+
+class UserInfoUpdate(BaseModel):
+    """用户信息更新请求模型（所有者用）。"""
+
+    display_name: Optional[str] = Field(None, max_length=100, description="显示名称")
+    email: Optional[EmailStr] = Field(None, description="邮箱")
+    password: Optional[str] = Field(None, min_length=6, max_length=100, description="新密码")
+    is_active: Optional[bool] = Field(None, description="是否激活")
+
+
+class UserSelfUpdate(BaseModel):
+    """用户个人信息更新请求模型（用户自己用）。"""
+
+    display_name: Optional[str] = Field(None, max_length=100, description="显示名称")
+    email: Optional[EmailStr] = Field(None, description="邮箱")
+    current_password: Optional[str] = Field(None, description="当前密码（修改密码时必填）")
+    new_password: Optional[str] = Field(None, min_length=6, max_length=100, description="新密码")

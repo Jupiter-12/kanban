@@ -122,6 +122,13 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * 设置用户信息
+   */
+  function setUser(newUser: User): void {
+    user.value = newUser
+  }
+
   return {
     // 状态
     user,
@@ -132,6 +139,7 @@ export const useAuthStore = defineStore('auth', () => {
     currentUser,
     // 方法
     setToken,
+    setUser,
     register,
     login,
     logout,
