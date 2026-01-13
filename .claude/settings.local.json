@@ -65,7 +65,21 @@
       "Skill(openspec:archive)",
       "Bash(openspec archive:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: 实现任务详情增强功能\n\n- 后端：扩展Task模型，添加description、due_date、priority、assignee_id字段\n- 后端：新增用户列表API用于负责人选择\n- 后端：添加负责人验证逻辑（检查用户存在性和活跃状态）\n- 前端：新增TaskDetailDialog任务详情弹窗组件\n- 前端：TaskCard展示优先级指示条、截止日期和负责人头像\n- 测试：新增25个测试用例，覆盖率97%\n- 脚本：添加test-task-detail测试脚本\n- 脚本：修复start-dev热重载监控范围，排除tests目录\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "mcp__filesystem__list_directory",
+      "mcp__filesystem__read_multiple_files",
+      "mcp__filesystem__read_text_file",
+      "mcp__filesystem__create_directory",
+      "mcp__filesystem__write_file",
+      "mcp__desktop-commander__list_sessions",
+      "Bash(./test-user-role.bat)",
+      "Bash(npx openspec:*)",
+      "Bash(ls:*)",
+      "Bash(claude --version:*)",
+      "mcp__desktop-commander__get_config",
+      "Bash(npm show:*)",
+      "Bash(for f in /c/Files/PDU/Offering/Software/kanban/tmpclaude-*)",
+      "Bash(done)"
     ]
   }
 }
