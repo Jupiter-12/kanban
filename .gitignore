@@ -34,10 +34,15 @@ logs/
 .coverage
 htmlcov/
 .pytest_cache/
+coverage/
+frontend/coverage/
 
 # 前端缓存
 .cache/
 *.local
+
+# Claude Code本地配置
+.claude/settings.local.json
 
 # Ruff
 .ruff_cache/
