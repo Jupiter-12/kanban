@@ -6,7 +6,8 @@ import type {
   Project,
   ProjectDetail,
   ProjectCreateRequest,
-  ProjectUpdateRequest
+  ProjectUpdateRequest,
+  TaskFilterParams
 } from '@/types'
 
 /**
@@ -27,9 +28,27 @@ export function getProjects(): Promise<Project[]> {
 /**
  * 获取项目详情
  * @param projectId - 项目ID
+ * @param filter - 任务筛选参数（可选）
  */
-export function getProject(projectId: number): Promise<ProjectDetail> {
-  return get<ProjectDetail>(`/projects/${projectId}`)
+export function getProject(
+  projectId: number,
+  filter?: TaskFilterParams
+): Promise<ProjectDetail> {
+  // 构建查询参数
+  const params = new URLSearchParams()
+  if (filter) {
+    if (filter.keyword) params.append('keyword', filter.keyword)
+    if (filter.assignee_id !== undefined && filter.assignee_id !== null)
+      params.append('assignee_id', String(filter.assignee_id))
+    if (filter.priority) params.append('priority', filter.priority)
+    if (filter.due_date_start) params.append('due_date_start', filter.due_date_start)
+    if (filter.due_date_end) params.append('due_date_end', filter.due_date_end)
+  }
+  const queryString = params.toString()
+  const url = queryString
+    ? `/projects/${projectId}?${queryString}`
+    : `/projects/${projectId}`
+  return get<ProjectDetail>(url)
 }
 
 /**

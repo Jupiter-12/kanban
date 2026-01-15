@@ -28,6 +28,7 @@ const emit = defineEmits<{
   deleteTask: [taskId: number]
   moveTask: [taskId: number, sourceColumnId: number, targetColumnId: number, newPosition: number]
   clickTask: [task: Task]
+  userEditing: [editing: boolean]
 }>()
 
 const editing = ref(false)
@@ -38,11 +39,13 @@ const newTaskTitle = ref('')
 function startEdit(name: string) {
   editName.value = name
   editing.value = true
+  emit('userEditing', true)
 }
 
 function cancelEdit() {
   editing.value = false
   editName.value = ''
+  emit('userEditing', false)
 }
 
 function confirmEdit(columnId: number) {
@@ -55,11 +58,13 @@ function confirmEdit(columnId: number) {
 function startAddTask() {
   addingTask.value = true
   newTaskTitle.value = ''
+  emit('userEditing', true)
 }
 
 function cancelAddTask() {
   addingTask.value = false
   newTaskTitle.value = ''
+  emit('userEditing', false)
 }
 
 function confirmAddTask(columnId: number) {
@@ -67,6 +72,14 @@ function confirmAddTask(columnId: number) {
     emit('createTask', columnId, newTaskTitle.value.trim())
   }
   cancelAddTask()
+}
+
+function handleTaskDragStart() {
+  emit('userEditing', true)
+}
+
+function handleTaskDragEnd() {
+  emit('userEditing', false)
 }
 
 /**
@@ -131,6 +144,8 @@ function onTaskChange(event: DragChangeEvent) {
         class="task-list"
         :animation="150"
         :disabled="readonly"
+        @start="handleTaskDragStart"
+        @end="handleTaskDragEnd"
         @change="onTaskChange"
       >
         <template #item="{ element: task }">

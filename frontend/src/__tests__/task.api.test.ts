@@ -11,6 +11,11 @@ vi.mock('@/api/request')
 const mockTask: Task = {
   id: 1,
   title: '测试任务',
+  description: null,
+  due_date: null,
+  priority: 'medium',
+  assignee_id: null,
+  assignee: null,
   column_id: 1,
   position: 0,
   created_at: '2024-01-01T00:00:00Z',

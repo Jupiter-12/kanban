@@ -1,12 +1,15 @@
 """项目服务模块。"""
 
+from datetime import time, timedelta
 from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
 from ..models.project import Project
 from ..models.column import KanbanColumn
+from ..models.task import Task
 from ..schemas.project import ProjectCreate, ProjectUpdate
+from ..schemas.task import TaskFilter
 
 
 # 默认列名称
@@ -66,6 +69,75 @@ class ProjectService:
             项目对象，如果不存在则返回None
         """
         return self.db.query(Project).filter(Project.id == project_id).first()
+
+    def get_project_with_filter(
+        self, project_id: int, task_filter: Optional[TaskFilter] = None
+    ) -> Optional[Project]:
+        """根据ID获取项目，支持任务筛选。
+
+        Args:
+            project_id: 项目ID
+            task_filter: 任务筛选条件
+
+        Returns:
+            项目对象（带筛选后的任务），如果不存在则返回None
+        """
+        project = self.db.query(Project).filter(Project.id == project_id).first()
+        if not project:
+            return None
+
+        # 如果没有筛选条件，直接返回
+        if not task_filter or not any([
+            task_filter.keyword,
+            task_filter.assignee_id,
+            task_filter.priority,
+            task_filter.due_date_start,
+            task_filter.due_date_end,
+        ]):
+            return project
+
+        # 获取项目的所有列ID
+        column_ids = [col.id for col in project.columns]
+
+        # 构建筛选查询
+        query = self.db.query(Task).filter(Task.column_id.in_(column_ids))
+
+        if task_filter.keyword:
+            # 不区分大小写的模糊匹配，转义 LIKE 通配符防止意外匹配
+            escaped_keyword = (
+                task_filter.keyword
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_")
+            )
+            query = query.filter(Task.title.ilike(f"%{escaped_keyword}%", escape="\\"))
+
+        if task_filter.assignee_id is not None:
+            query = query.filter(Task.assignee_id == task_filter.assignee_id)
+
+        if task_filter.priority:
+            query = query.filter(Task.priority == task_filter.priority.value)
+
+        if task_filter.due_date_start:
+            query = query.filter(Task.due_date >= task_filter.due_date_start)
+
+        if task_filter.due_date_end:
+            due_date_end = task_filter.due_date_end
+            if due_date_end.time() == time.min:
+                # 仅传日期时，按次日零点前包含
+                due_date_end = due_date_end + timedelta(days=1)
+                query = query.filter(Task.due_date < due_date_end)
+            else:
+                query = query.filter(Task.due_date <= due_date_end)
+
+        # 获取筛选后的任务ID
+        filtered_task_ids = {task.id for task in query.all()}
+
+        # 过滤每个列的任务
+        for column in project.columns:
+            column.tasks = [task for task in column.tasks if task.id in filtered_task_ids]
+
+        return project
 
     def get_projects_by_owner(self, owner_id: int) -> List[Project]:
         """获取用户的所有项目。

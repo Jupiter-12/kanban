@@ -57,6 +57,16 @@ class TaskMove(BaseModel):
     position: int = Field(..., ge=0, description="目标位置")
 
 
+class TaskFilter(BaseModel):
+    """任务筛选参数模型。"""
+
+    keyword: Optional[str] = Field(None, description="标题关键词（模糊匹配）")
+    assignee_id: Optional[int] = Field(None, description="负责人ID")
+    priority: Optional[TaskPriority] = Field(None, description="优先级")
+    due_date_start: Optional[datetime] = Field(None, description="截止日期起始")
+    due_date_end: Optional[datetime] = Field(None, description="截止日期结束")
+
+
 class TaskResponse(TaskBase):
     """任务响应模型。"""
 

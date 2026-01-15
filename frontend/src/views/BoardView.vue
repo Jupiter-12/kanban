@@ -8,9 +8,12 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, Plus } from '@element-plus/icons-vue'
 import draggable from 'vuedraggable'
 import { useBoardStore, useAuthStore } from '@/stores'
+import { usePolling } from '@/composables'
+import { POLLING_INTERVAL } from '@/config'
 import BoardColumn from '@/components/BoardColumn.vue'
 import TaskDetailDialog from '@/components/TaskDetailDialog.vue'
-import type { ColumnWithTasks, Task, TaskPriority } from '@/types'
+import TaskFilter from '@/components/TaskFilter.vue'
+import type { ColumnWithTasks, Task, TaskPriority, TaskFilterParams } from '@/types'
 
 /** 列拖拽变更事件类型 */
 interface ColumnDragChangeEvent {
@@ -51,6 +54,15 @@ const canEdit = computed(() => {
 // 是否为只读模式
 const isReadonly = computed(() => !canEdit.value)
 
+// 筛选条件
+const filterParams = ref<TaskFilterParams>({})
+
+// 轮询刷新
+const { start: startPolling, stop: stopPolling, isPaused } = usePolling(
+  () => boardStore.silentRefresh(),
+  { interval: POLLING_INTERVAL, pauseOnHidden: true }
+)
+
 onMounted(async () => {
   if (projectId.value === null) {
     ElMessage.error('无效的项目ID')
@@ -58,15 +70,41 @@ onMounted(async () => {
     return
   }
   await boardStore.loadProject(projectId.value)
+  // 加载完成后启动轮询
+  startPolling()
 })
 
 onUnmounted(() => {
+  stopPolling()
   boardStore.clearProject()
 })
 
 function goBack() {
   // 使用浏览器历史返回，保持用户的导航上下文
   router.back()
+}
+
+/**
+ * 处理筛选搜索
+ */
+async function handleFilterSearch(filter: TaskFilterParams) {
+  try {
+    await boardStore.applyFilter(filter)
+  } catch {
+    ElMessage.error('筛选失败')
+  }
+}
+
+/**
+ * 处理清除筛选
+ */
+async function handleFilterClear() {
+  filterParams.value = {}
+  try {
+    await boardStore.applyFilter({})
+  } catch {
+    ElMessage.error('清除筛选失败')
+  }
 }
 
 function startAddColumn() {
@@ -188,6 +226,7 @@ function handleClickTask(task: Task) {
   const latestTask = boardStore.getTaskById(task.id)
   selectedTask.value = latestTask || task
   taskDialogVisible.value = true
+  boardStore.setUserEditing(true)
 }
 
 /**
@@ -201,6 +240,7 @@ function handleTaskDialogClose() {
       selectedTask.value = latestTask
     }
   }
+  boardStore.setUserEditing(false)
 }
 
 /**
@@ -235,14 +275,32 @@ async function handleTaskDetailConfirm(data: {
         <el-button :icon="ArrowLeft" @click="goBack">返回</el-button>
         <h1>{{ boardStore.projectName }}</h1>
         <el-tag v-if="isReadonly" type="info" size="small">只读</el-tag>
+        <el-tag v-if="boardStore.hasActiveFilter" type="warning" size="small">筛选中</el-tag>
       </div>
     </div>
+
+    <!-- 筛选栏 -->
+    <TaskFilter
+      v-model="filterParams"
+      @search="handleFilterSearch"
+      @clear="handleFilterClear"
+    />
 
     <div v-if="boardStore.loading" class="loading">
       <el-skeleton :rows="5" animated />
     </div>
 
     <div v-else class="board-content">
+      <!-- 筛选结果为空提示 -->
+      <div
+        v-if="boardStore.hasActiveFilter && boardStore.columns.every(c => c.tasks.length === 0)"
+        class="empty-filter-result"
+      >
+        <el-empty description="暂无符合条件的任务">
+          <el-button @click="handleFilterClear">清除筛选</el-button>
+        </el-empty>
+      </div>
+
       <div class="columns-container">
         <draggable
           :list="boardStore.columns"
@@ -251,6 +309,8 @@ async function handleTaskDetailConfirm(data: {
           handle=".column-header"
           :animation="150"
           :disabled="isReadonly"
+          @start="boardStore.setUserEditing(true)"
+          @end="boardStore.setUserEditing(false)"
           @change="onColumnChange"
         >
           <template #item="{ element: column }">
@@ -264,6 +324,7 @@ async function handleTaskDetailConfirm(data: {
               @delete-task="handleDeleteTask"
               @move-task="handleMoveTask"
               @click-task="handleClickTask"
+              @user-editing="boardStore.setUserEditing"
             />
           </template>
         </draggable>
@@ -341,6 +402,13 @@ async function handleTaskDetailConfirm(data: {
   flex: 1;
   overflow-x: auto;
   overflow-y: hidden;
+}
+
+.empty-filter-result {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 48px;
 }
 
 .columns-container {

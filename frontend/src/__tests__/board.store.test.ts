@@ -20,6 +20,11 @@ function createTask(overrides: Partial<Task> = {}): Task {
   return {
     id: 1,
     title: '测试任务',
+    description: null,
+    due_date: null,
+    priority: 'medium',
+    assignee_id: null,
+    assignee: null,
     column_id: 1,
     position: 0,
     created_at: '2024-01-01T00:00:00Z',
@@ -101,10 +106,10 @@ describe('useBoardStore', () => {
       
       vi.mocked(taskApi.moveTask).mockRejectedValue(new Error('网络错误'))
       vi.mocked(projectApi.getProject).mockResolvedValue(createProject({ id: 1 }))
-      
+
       await expect(store.moveTask(1, 1, 1, 0)).rejects.toThrow('网络错误')
-      
-      expect(projectApi.getProject).toHaveBeenCalledWith(1)
+
+      expect(projectApi.getProject).toHaveBeenCalledWith(1, {})
     })
   })
 
@@ -217,10 +222,10 @@ describe('useBoardStore', () => {
       
       vi.mocked(columnApi.reorderColumns).mockRejectedValue(new Error('网络错误'))
       vi.mocked(projectApi.getProject).mockResolvedValue(createProject({ id: 1 }))
-      
+
       await expect(store.reorderColumns([1])).rejects.toThrow('网络错误')
-      
-      expect(projectApi.getProject).toHaveBeenCalledWith(1)
+
+      expect(projectApi.getProject).toHaveBeenCalledWith(1, {})
     })
   })
 
@@ -543,10 +548,10 @@ describe('useBoardStore', () => {
       const project = createProject({ id: 1, name: '测试项目' })
       
       vi.mocked(projectApi.getProject).mockResolvedValue(project)
-      
+
       await store.loadProject(1)
-      
-      expect(projectApi.getProject).toHaveBeenCalledWith(1)
+
+      expect(projectApi.getProject).toHaveBeenCalledWith(1, {})
       expect(store.currentProject).toEqual(project)
       expect(store.loading).toBe(false)
     })
@@ -607,8 +612,169 @@ describe('useBoardStore', () => {
     it('当 currentProject 为 null 时 projectName 应该返回空字符串', () => {
       const store = useBoardStore()
       store.currentProject = null
-      
+
       expect(store.projectName).toBe('')
+    })
+  })
+
+  describe('silentRefresh - 静默刷新', () => {
+    it('应该静默刷新项目数据', async () => {
+      const store = useBoardStore()
+      const project = createProject({ id: 1, name: '测试项目' })
+      store.currentProject = project
+
+      const updatedProject = createProject({ id: 1, name: '更新后的项目' })
+      vi.mocked(projectApi.getProject).mockResolvedValue(updatedProject)
+
+      await store.silentRefresh()
+
+      expect(projectApi.getProject).toHaveBeenCalledWith(1, {})
+      expect(store.currentProject?.name).toBe('更新后的项目')
+    })
+
+    it('当 currentProject 为 null 时不应该刷新', async () => {
+      const store = useBoardStore()
+      store.currentProject = null
+
+      await store.silentRefresh()
+
+      expect(projectApi.getProject).not.toHaveBeenCalled()
+    })
+
+    it('当用户正在编辑时不应该刷新', async () => {
+      const store = useBoardStore()
+      store.currentProject = createProject({ id: 1 })
+      store.setUserEditing(true)
+
+      await store.silentRefresh()
+
+      expect(projectApi.getProject).not.toHaveBeenCalled()
+    })
+
+    it('刷新失败时不应该抛出错误', async () => {
+      const store = useBoardStore()
+      store.currentProject = createProject({ id: 1 })
+
+      vi.mocked(projectApi.getProject).mockRejectedValue(new Error('网络错误'))
+
+      // 不应该抛出错误
+      await expect(store.silentRefresh()).resolves.toBeUndefined()
+    })
+
+    it('应该带上当前筛选条件刷新', async () => {
+      const store = useBoardStore()
+      store.currentProject = createProject({ id: 1 })
+      store.taskFilter = { keyword: '测试', priority: 'high' }
+
+      vi.mocked(projectApi.getProject).mockResolvedValue(createProject({ id: 1 }))
+
+      await store.silentRefresh()
+
+      expect(projectApi.getProject).toHaveBeenCalledWith(1, { keyword: '测试', priority: 'high' })
+    })
+  })
+
+  describe('setUserEditing - 用户编辑状态', () => {
+    it('应该正确设置用户编辑状态', () => {
+      const store = useBoardStore()
+
+      store.setUserEditing(true)
+      expect(store.isUserEditing).toBe(true)
+
+      store.setUserEditing(false)
+      expect(store.isUserEditing).toBe(false)
+    })
+  })
+
+  describe('筛选功能', () => {
+    it('setFilter 应该设置筛选条件', () => {
+      const store = useBoardStore()
+      const filter = { keyword: '测试', priority: 'high' as const }
+
+      store.setFilter(filter)
+
+      expect(store.taskFilter).toEqual(filter)
+    })
+
+    it('clearFilter 应该清除筛选条件', () => {
+      const store = useBoardStore()
+      store.taskFilter = { keyword: '测试', priority: 'high' }
+
+      store.clearFilter()
+
+      expect(store.taskFilter).toEqual({})
+    })
+
+    it('applyFilter 应该设置筛选条件并刷新数据', async () => {
+      const store = useBoardStore()
+      store.currentProject = createProject({ id: 1 })
+      const filter = { keyword: '测试' }
+
+      vi.mocked(projectApi.getProject).mockResolvedValue(createProject({ id: 1 }))
+
+      await store.applyFilter(filter)
+
+      expect(store.taskFilter).toEqual(filter)
+      expect(projectApi.getProject).toHaveBeenCalledWith(1, filter)
+    })
+
+    it('applyFilter 当 currentProject 为 null 时只设置筛选条件', async () => {
+      const store = useBoardStore()
+      store.currentProject = null
+      const filter = { keyword: '测试' }
+
+      await store.applyFilter(filter)
+
+      expect(store.taskFilter).toEqual(filter)
+      expect(projectApi.getProject).not.toHaveBeenCalled()
+    })
+
+    it('hasActiveFilter 应该正确判断是否有活动筛选', () => {
+      const store = useBoardStore()
+
+      expect(store.hasActiveFilter).toBe(false)
+
+      store.taskFilter = { keyword: '测试' }
+      expect(store.hasActiveFilter).toBe(true)
+
+      store.taskFilter = { priority: 'high' }
+      expect(store.hasActiveFilter).toBe(true)
+
+      store.taskFilter = { assignee_id: 1 }
+      expect(store.hasActiveFilter).toBe(true)
+
+      store.taskFilter = { due_date_start: '2025-01-01' }
+      expect(store.hasActiveFilter).toBe(true)
+
+      store.taskFilter = { due_date_end: '2025-12-31' }
+      expect(store.hasActiveFilter).toBe(true)
+
+      store.taskFilter = {}
+      expect(store.hasActiveFilter).toBe(false)
+    })
+
+    it('clearProject 应该同时清除筛选条件', () => {
+      const store = useBoardStore()
+      store.currentProject = createProject({ id: 1 })
+      store.taskFilter = { keyword: '测试' }
+
+      store.clearProject()
+
+      expect(store.currentProject).toBeNull()
+      expect(store.taskFilter).toEqual({})
+    })
+  })
+
+  describe('loadProject 带筛选条件', () => {
+    it('应该带上筛选条件加载项目', async () => {
+      const store = useBoardStore()
+      store.taskFilter = { keyword: '测试', priority: 'high' }
+
+      vi.mocked(projectApi.getProject).mockResolvedValue(createProject({ id: 1 }))
+
+      await store.loadProject(1)
+
+      expect(projectApi.getProject).toHaveBeenCalledWith(1, { keyword: '测试', priority: 'high' })
     })
   })
 })

@@ -3,8 +3,6 @@
  * 重点测试拖拽事件处理逻辑
  */
 import { describe, it, expect, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
-import { defineComponent, h } from 'vue'
 import type { ColumnWithTasks, Task } from '@/types'
 
 // 创建测试数据
@@ -12,6 +10,11 @@ function createTask(overrides: Partial<Task> = {}): Task {
   return {
     id: 1,
     title: '测试任务',
+    description: null,
+    due_date: null,
+    priority: 'medium',
+    assignee_id: null,
+    assignee: null,
     column_id: 1,
     position: 0,
     created_at: '2024-01-01T00:00:00Z',

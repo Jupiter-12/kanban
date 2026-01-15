@@ -25,3 +25,4 @@ class Task(Base):
     # 关系
     column = relationship("KanbanColumn", back_populates="tasks")
     assignee = relationship("User", foreign_keys=[assignee_id], lazy="joined")
+    comments = relationship("Comment", back_populates="task", cascade="all, delete-orphan")

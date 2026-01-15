@@ -102,3 +102,34 @@ export interface ProjectUpdateRequest {
   name?: string
   description?: string
 }
+
+/** 任务筛选参数 */
+export interface TaskFilterParams {
+  keyword?: string
+  assignee_id?: number
+  priority?: TaskPriority
+  due_date_start?: string
+  due_date_end?: string
+}
+
+/** 评论用户信息 */
+export interface CommentUser {
+  id: number
+  username: string
+  display_name: string | null
+}
+
+/** 评论信息 */
+export interface Comment {
+  id: number
+  task_id: number
+  user_id: number
+  content: string
+  created_at: string
+  user: CommentUser
+}
+
+/** 评论创建请求 */
+export interface CommentCreateRequest {
+  content: string
+}

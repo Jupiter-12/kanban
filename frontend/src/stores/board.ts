@@ -11,7 +11,8 @@ import type {
   ColumnUpdateRequest,
   TaskCreateRequest,
   TaskUpdateRequest,
-  TaskMoveRequest
+  TaskMoveRequest,
+  TaskFilterParams
 } from '@/types'
 import * as projectApi from '@/api/project'
 import * as columnApi from '@/api/column'
@@ -21,10 +22,22 @@ export const useBoardStore = defineStore('board', () => {
   // 状态
   const currentProject = ref<ProjectDetail | null>(null)
   const loading = ref(false)
+  const taskFilter = ref<TaskFilterParams>({})
+  const isUserEditing = ref(false)
 
   // 计算属性
   const columns = computed(() => currentProject.value?.columns || [])
   const projectName = computed(() => currentProject.value?.name || '')
+  const hasActiveFilter = computed(() => {
+    const f = taskFilter.value
+    return !!(
+      f.keyword ||
+      f.assignee_id !== undefined ||
+      f.priority ||
+      f.due_date_start ||
+      f.due_date_end
+    )
+  })
 
   /**
    * 加载项目详情
@@ -32,9 +45,55 @@ export const useBoardStore = defineStore('board', () => {
   async function loadProject(projectId: number): Promise<void> {
     loading.value = true
     try {
-      currentProject.value = await projectApi.getProject(projectId)
+      currentProject.value = await projectApi.getProject(projectId, taskFilter.value)
     } finally {
       loading.value = false
+    }
+  }
+
+  /**
+   * 静默刷新项目数据（不显示 loading 状态）
+   * 用于轮询刷新，不影响用户操作
+   */
+  async function silentRefresh(): Promise<void> {
+    if (!currentProject.value || isUserEditing.value) return
+    try {
+      const data = await projectApi.getProject(currentProject.value.id, taskFilter.value)
+      currentProject.value = data
+    } catch {
+      // 静默刷新失败时不显示错误
+    }
+  }
+
+  /**
+   * 设置用户编辑状态
+   * 用于在用户编辑时暂停轮询刷新
+   */
+  function setUserEditing(editing: boolean): void {
+    isUserEditing.value = editing
+  }
+
+  /**
+   * 设置筛选条件
+   */
+  function setFilter(filter: TaskFilterParams): void {
+    taskFilter.value = filter
+  }
+
+  /**
+   * 清除筛选条件
+   */
+  function clearFilter(): void {
+    taskFilter.value = {}
+  }
+
+  /**
+   * 应用筛选条件并刷新数据
+   */
+  async function applyFilter(filter: TaskFilterParams): Promise<void> {
+    taskFilter.value = filter
+    if (currentProject.value) {
+      await loadProject(currentProject.value.id)
     }
   }
 
@@ -43,6 +102,7 @@ export const useBoardStore = defineStore('board', () => {
    */
   function clearProject(): void {
     currentProject.value = null
+    taskFilter.value = {}
   }
 
   /**
@@ -247,11 +307,19 @@ export const useBoardStore = defineStore('board', () => {
     // 状态
     currentProject,
     loading,
+    taskFilter,
+    isUserEditing,
     // 计算属性
     columns,
     projectName,
+    hasActiveFilter,
     // 方法
     loadProject,
+    silentRefresh,
+    setUserEditing,
+    setFilter,
+    clearFilter,
+    applyFilter,
     clearProject,
     createColumn,
     updateColumn,

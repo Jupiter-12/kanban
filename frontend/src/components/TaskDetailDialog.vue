@@ -4,6 +4,7 @@
  */
 import { ref, watch, computed, onMounted } from 'vue'
 import { getUsers } from '@/api'
+import CommentSection from './CommentSection.vue'
 import type { Task, TaskPriority, UserListItem } from '@/types'
 
 const props = defineProps<{
@@ -205,6 +206,14 @@ function getUserDisplayName(user: UserListItem): string {
         </el-select>
       </el-form-item>
     </el-form>
+
+    <!-- 评论区 -->
+    <CommentSection
+      v-if="task"
+      :task-id="task.id"
+      :readonly="readonly"
+    />
+
     <template #footer>
       <el-button @click="handleClose">{{ readonly ? '关闭' : '取消' }}</el-button>
       <el-button v-if="!readonly" type="primary" @click="handleConfirm">

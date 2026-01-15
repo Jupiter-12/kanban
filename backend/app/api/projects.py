@@ -1,5 +1,6 @@
 """项目API路由。"""
 
+from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -15,6 +16,7 @@ from ..schemas.project import (
     ProjectResponse,
     ProjectUpdate,
 )
+from ..schemas.task import TaskFilter, TaskPriority
 from ..services.project import ProjectService
 
 router = APIRouter(prefix="/projects", tags=["项目"])
@@ -115,13 +117,30 @@ def get_projects_paginated(
 @router.get("/{project_id}", response_model=ProjectDetailResponse)
 def get_project(
     project_id: int,
+    keyword: Optional[str] = Query(None, description="标题关键词（模糊匹配）"),
+    assignee_id: Optional[int] = Query(None, description="负责人ID"),
+    priority: Optional[TaskPriority] = Query(None, description="优先级"),
+    due_date_start: Optional[datetime] = Query(None, description="截止日期起始"),
+    due_date_end: Optional[datetime] = Query(None, description="截止日期结束"),
     current_user: User = Depends(get_current_user),
     project_service: ProjectService = Depends(get_project_service),
 ) -> ProjectDetailResponse:
     """获取项目详情（包含列和任务）。
 
+    支持任务筛选参数：
+    - keyword: 标题关键词（不区分大小写）
+    - assignee_id: 负责人ID
+    - priority: 优先级（high/medium/low）
+    - due_date_start: 截止日期起始
+    - due_date_end: 截止日期结束
+
     Args:
         project_id: 项目ID
+        keyword: 标题关键词
+        assignee_id: 负责人ID
+        priority: 优先级
+        due_date_start: 截止日期起始
+        due_date_end: 截止日期结束
         current_user: 当前用户
         project_service: 项目服务
 
@@ -131,7 +150,16 @@ def get_project(
     Raises:
         HTTPException: 如果项目不存在
     """
-    project = project_service.get_project_by_id(project_id)
+    # 构建筛选条件
+    task_filter = TaskFilter(
+        keyword=keyword,
+        assignee_id=assignee_id,
+        priority=priority,
+        due_date_start=due_date_start,
+        due_date_end=due_date_end,
+    )
+
+    project = project_service.get_project_with_filter(project_id, task_filter)
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
